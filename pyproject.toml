@@ -1,14 +1,24 @@
 [project]
 name = "wardsight"
 version = "0.1.0"
-description = "Add your description here"
+description = "Live AI command center for hospital documentation integrity, on a synthetic ward"
 readme = "README.md"
-authors = [
-    { name = "nikhilcrypto0", email = "nikhilmittu1232@gmail.com" }
-]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["duckdb>=1.1", "openai>=1.99", "pydantic>=2.7", "python-dotenv>=1.0"]
+
+[project.scripts]
+wardsight-factory = "wardsight.factory:main"
+wardsight-notes = "wardsight.notes.writer:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "fhir.resources>=8", "ruff>=0.6"]
 
 [build-system]
 requires = ["uv_build>=0.11.16,<0.12.0"]
 build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 110
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

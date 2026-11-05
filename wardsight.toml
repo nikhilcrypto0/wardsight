@@ -1,0 +1,8 @@
+# Budgets for every LLM step. A run halts and logs the moment any cap would be crossed.
+# Tokens, not dollars: prices change, token counts do not lie.
+
+[llm]
+max_output_tokens_per_call = 4000   # one chart's three notes
+max_tokens_per_run = 1_500_000      # ~300 charts x ~4-5k tokens, with room for retries
+max_tokens_per_day = 2_500_000
+max_attempts_per_item = 3           # first try + 2 retries with the problems listed
