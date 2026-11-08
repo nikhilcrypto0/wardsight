@@ -234,6 +234,19 @@ wheels = [
 ]
 
 [[package]]
+name = "msdrg"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/60/45/a4e3c986ec7df726c4c249fc004a57f2c97fc325f70265b6cafe11f11665/msdrg-1.2.0.tar.gz", hash = "sha256:c98f228e7a31f505d4322cb75686a4befb8e9e111387ebf76cd7b3ff11ac819a", size = 5252638, upload-time = "2026-08-10T01:46:42.557Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c7/be/9a9bb5a2b500bc37d609faede306e54e7d29203bdd668f669861c57f2bef/msdrg-1.2.0-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:b2a71bafc0caa2a188b1d6efc038ffc1a4c2339b7233b5fdaf96e147639cc2b8", size = 5536203, upload-time = "2026-08-10T01:46:30.784Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/6c/097e91026aa6229220c40be118446ed51859019a008965231a706eb93618/msdrg-1.2.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:52fe6c7ec6728478fb43fade2a8a6ae5c175c4c353f7d956abeaa43e4eac4706", size = 5526195, upload-time = "2026-08-10T01:46:33.164Z" },
+    { url = "https://files.pythonhosted.org/packages/19/8a/ae5e23975415e64a32c8bf5150e6049df48f1eae760e5a00e4ca2592f796/msdrg-1.2.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:40100d11569feb51a6eed50ccb00e37bb7022cf57d7c999cec06e9c55286ee99", size = 6795362, upload-time = "2026-08-10T01:46:35.401Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/02/0e99b10d821ee4b99356996855f950101dce690a30bffd8c169cbf53b5df/msdrg-1.2.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:86354b69dfb5611d2fd880b6f8332dde9aa4ee328dfb4798d7d3fc63aaf47d30", size = 6857271, upload-time = "2026-08-10T01:46:37.838Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/5c/5c960e7ec8e04b6fef5b7201101e58cca64138d3147e3313e35c3e9e0361/msdrg-1.2.0-py3-none-win_amd64.whl", hash = "sha256:217fccf1fa09ac8e674791c3042ceb390218eedc90f84a1ae5b47edd32d3b54e", size = 5649955, upload-time = "2026-08-10T01:46:40.219Z" },
+]
+
+[[package]]
 name = "openai"
 version = "3.46.0"
 source = { registry = "https://pypi.org/simple" }
@@ -496,6 +509,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "duckdb" },
+    { name = "msdrg" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -511,6 +525,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "duckdb", specifier = ">=1.1" },
+    { name = "msdrg", specifier = ">=1.2.0" },
     { name = "openai", specifier = ">=1.99" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "python-dotenv", specifier = ">=1.0" },

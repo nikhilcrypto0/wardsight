@@ -4,11 +4,19 @@ version = "0.1.0"
 description = "Live AI command center for hospital documentation integrity, on a synthetic ward"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["duckdb>=1.1", "openai>=1.99", "pydantic>=2.7", "python-dotenv>=1.0"]
+dependencies = [
+    "duckdb>=1.1",
+    "msdrg>=1.2.0",
+    "openai>=1.99",
+    "pydantic>=2.7",
+    "python-dotenv>=1.0",
+]
 
 [project.scripts]
 wardsight-factory = "wardsight.factory:main"
 wardsight-notes = "wardsight.notes.writer:main"
+wardsight-scan = "wardsight.engine.scan:main"
+wardsight-bench = "wardsight.bench:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "fhir.resources>=8", "ruff>=0.6"]

@@ -22,12 +22,10 @@ from dotenv import load_dotenv
 
 from wardsight.notes.budget import BudgetExceeded, Ledger, load_budget
 from wardsight.notes.spec import SYSTEM_PROMPT, NoteSet, check_notes, user_prompt
+from wardsight.notes.template import NOTES_DDL, write_template_notes
 from wardsight.reload import load_encounters
 
 log = logging.getLogger("wardsight.notes")
-
-NOTES_DDL = """CREATE TABLE IF NOT EXISTS ehr.notes (encounter_id VARCHAR, note_type VARCHAR,
-    hospital_day INTEGER, ts TIMESTAMP, text VARCHAR)"""
 
 # (system, user) -> (parsed NoteSet or None, input_tokens, output_tokens)
 Generate = Callable[[str, str], tuple[NoteSet | None, int, int]]
@@ -53,7 +51,8 @@ def write_notes(db: Path, config: Path, generate: Generate, model: str, limit: i
     with duckdb.connect(str(db)) as con:
         con.execute(NOTES_DDL)
         ledger = Ledger(con, budget, "notes")
-        done = {r[0] for r in con.execute("SELECT DISTINCT encounter_id FROM ehr.notes").fetchall()}
+        done = {r[0] for r in con.execute(
+            "SELECT DISTINCT encounter_id FROM ehr.notes WHERE source = 'llm'").fetchall()}
         todo = [e for e in load_encounters(con) if e.encounter_id not in done][:limit]
         log.info("%d charts need notes", len(todo))
         try:
@@ -88,9 +87,11 @@ def _one(con, ledger: Ledger, generate: Generate, model: str, enc, attempts: int
 def _save(con, enc, note_set: NoteSet) -> None:
     admit = con.execute("SELECT admit_ts FROM ehr.encounters WHERE encounter_id = ?",
                         [enc.encounter_id]).fetchone()[0]
-    con.executemany("INSERT INTO ehr.notes VALUES (?, ?, ?, ?, ?)",
+    con.execute("DELETE FROM ehr.notes WHERE encounter_id = ?", [enc.encounter_id])  # drop template notes
+    con.executemany("INSERT INTO ehr.notes VALUES (?, ?, ?, ?, ?, ?)",
                     [(enc.encounter_id, n.note_type, n.hospital_day,
-                      admit + timedelta(days=n.hospital_day, hours=10), n.text) for n in note_set.notes])
+                      admit + timedelta(days=n.hospital_day, hours=10), n.text, "llm")
+                     for n in note_set.notes])
 
 
 def main() -> None:
@@ -98,8 +99,15 @@ def main() -> None:
     parser.add_argument("--db", type=Path, default=Path("data/wardsight.duckdb"))
     parser.add_argument("--config", type=Path, default=Path("wardsight.toml"))
     parser.add_argument("--limit", type=int, default=None, help="only this many charts (smoke test)")
+    parser.add_argument("--template", action="store_true",
+                        help="write plain template notes for every chart (no API, no cost)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    if args.template:
+        with duckdb.connect(str(args.db)) as con:
+            count = write_template_notes(con, load_encounters(con), seed=0)
+        log.info("template notes written for %d charts", count)
+        return
     load_dotenv()
     model = os.environ.get("WARDSIGHT_OPENAI_MODEL")
     if not os.environ.get("OPENAI_API_KEY") or not model:
