@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from wardsight.engine.chart import Chart
 from wardsight.engine.documentation import find_mentions
 from wardsight.engine.drg import DrgResult, coded_diagnoses, group
-from wardsight.engine.evidence import RULES, Evidence
+from wardsight.engine.evidence import RULES, Evidence, relevant_values
 
 CONDITION_CODE = {"aki": "N17.9", "sepsis": "A41.9", "hyponatremia": "E87.1",
                   "abla": "D62", "arf": "J96.01", "hf": "I50.21"}
@@ -49,7 +49,9 @@ def find_flags(chart: Chart) -> list[Flag]:
                               evidence.summary(), drg_now, group(chart, fixed)))
         elif code in affirmed and not evidence.met:
             phrase = next(m.phrase for m in mentions if m.icd10 == code and not m.negated)
+            observed = Evidence(condition, False, relevant_values(chart, condition)).summary()
             flags.append(Flag(chart.encounter_id, condition, "unsupported_dx", code,
                               f"notes state '{phrase}' but the chart does not meet criteria",
-                              "no qualifying evidence found", drg_now, group(chart, codes_now - {code})))
+                              observed or "no relevant measurements in the chart",
+                              drg_now, group(chart, codes_now - {code})))
     return flags

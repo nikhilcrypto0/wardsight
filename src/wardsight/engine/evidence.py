@@ -172,6 +172,35 @@ def hf(chart: Chart) -> Evidence:
                                  Indicator(diuretic[0][0], diuretic[0][1])))
 
 
+RELEVANT_ANALYTES: dict[str, tuple[tuple[str, str], ...]] = {
+    "aki": (("creatinine", "mg/dL"),),
+    "sepsis": (("map", "mmHg"), ("platelets", "K/uL"), ("bilirubin", "mg/dL"), ("lactate", "mmol/L"),
+               ("wbc", "K/uL")),
+    "hyponatremia": (("sodium", "mmol/L"),),
+    "abla": (("hemoglobin", "g/dL"),),
+    "arf": (("spo2", "%"), ("resp_rate", "/min"), ("o2_flow", "L/min")),
+    "hf": (("bnp", "pg/mL"), ("lvef", "%")),
+}
+
+
+def relevant_values(chart: Chart, condition: str) -> tuple[Indicator, ...]:
+    """The measured values a reviewer needs to judge a condition, as ranges over the stay.
+
+    Used when a documented diagnosis lacks support: the query must show what the
+    chart actually contains, not just say "no evidence".
+    """
+    found: list[Indicator] = []
+    for key, unit in RELEVANT_ANALYTES[condition]:
+        values = chart.series(key)
+        if not values:
+            continue
+        low, high = min(v for _, v in values), max(v for _, v in values)
+        label = key.replace("_", " ")
+        span = f"{low:g}" if low == high else f"{low:g} to {high:g}"
+        found.append(Indicator(values[0][0], f"{label} {span} {unit} across the stay"))
+    return tuple(found)
+
+
 RULES: dict[str, Callable[[Chart], Evidence]] = {
     "aki": aki, "sepsis": sepsis, "hyponatremia": hyponatremia, "abla": abla, "arf": arf, "hf": hf,
 }

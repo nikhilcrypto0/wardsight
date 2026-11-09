@@ -13,7 +13,8 @@ puts a human approval step in front of anything that leaves the system.
 | --- | --- |
 | 1. Data factory + answer key | Done (Synthea patients); LLM-written notes pending an API key |
 | 2. Detection rules + DRG impact | Done; scored on the dev set with template notes |
-| 3–7 | Not started |
+| 3. Physician queries + rules check | Done; template drafter live, OpenAI drafter built and tested offline |
+| 4–7 | Not started |
 
 ## The detection engine (milestone 2)
 
@@ -28,6 +29,21 @@ Plain code, no AI, reading only what a hospital system would hold.
 
 Dev-set score with template notes: 75 of 75 planted gaps caught, 0 false alarms. Template notes use
 clean wording, so this is the easy case; LLM-written notes and the held-out set are the real test.
+
+## Physician queries (milestone 3)
+
+Every flag becomes a draft query to the physician, waiting for a human reviewer.
+
+- **Code decides the substance:** the clinical indicators cited come from the chart, and the answer
+  options come from fixed lists with clinically reasonable alternatives plus "Other" and "Unable to
+  determine". The AI (or a template) writes only the question sentence.
+- **A rules check gates every draft**, following the ACDIS/AHIMA compliant query practice brief
+  (2022 update): no leading wording, the diagnosis is never named in a new-diagnosis question, no
+  financial talk (DRG, reimbursement, CC/MCC), at least two clinical indicators, no yes/no for a new
+  diagnosis, and no number that is not in the chart (so the AI cannot invent values).
+- A rejected draft is retried with the problems listed; one that still fails is left for a human.
+
+Dev set: 75 flags, 75 queries, all pass the rules check.
 
 Not every gap changes payment: cellulitis and UTI groups split only on major complications, so a
 complication like acute kidney injury raises severity there without moving the DRG.
@@ -63,4 +79,5 @@ uv run wardsight-factory
 uv run wardsight-notes --template      # or the LLM writer, with a key in .env
 uv run wardsight-scan --split dev
 uv run wardsight-bench --split dev
+uv run wardsight-queries --split dev   # add --llm to use the OpenAI drafter
 ```

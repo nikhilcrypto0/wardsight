@@ -17,6 +17,7 @@ wardsight-factory = "wardsight.factory:main"
 wardsight-notes = "wardsight.notes.writer:main"
 wardsight-scan = "wardsight.engine.scan:main"
 wardsight-bench = "wardsight.bench:main"
+wardsight-queries = "wardsight.queries.run:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "fhir.resources>=8", "ruff>=0.6"]

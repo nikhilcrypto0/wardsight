@@ -12,6 +12,8 @@ from wardsight.bench import run
 from wardsight.engine.scan import scan
 from wardsight.factory import run as build_ward
 from wardsight.notes.template import write_template_notes
+from wardsight.queries.draft import template_drafter
+from wardsight.queries.run import draft_all
 from wardsight.reload import load_encounters
 
 ENGINE = Path(__file__).parents[1] / "src" / "wardsight" / "engine"
@@ -20,7 +22,7 @@ FORBIDDEN_MODULES = {"wardsight.scenarios", "wardsight.planter", "wardsight.relo
 
 
 def test_engine_never_imports_the_generator_or_reads_truth():
-    for path in ENGINE.glob("*.py"):
+    for path in [*ENGINE.glob("*.py"), *ENGINE.parent.joinpath("queries").glob("*.py")]:
         source = path.read_text()
         assert "truth." not in source, f"{path.name} reads the truth schema"
         for node in ast.walk(ast.parse(source)):
@@ -44,6 +46,14 @@ def test_dev_score_on_template_notes(ward: Path):
     with duckdb.connect(str(ward)) as con:
         result = run(con, "dev", final=False)
     assert result.recall == 1.0 and result.false_alarms == 0
+
+
+def test_every_dev_flag_gets_a_compliant_query(ward: Path):
+    with duckdb.connect(str(ward)) as con:
+        results = draft_all(con, "dev", template_drafter, "template", 1)
+        statuses = {r[0] for r in con.execute("SELECT DISTINCT status FROM ops.queries").fetchall()}
+    assert len(results) == 75 and all(r.lint.ok for r in results)
+    assert statuses == {"pending_review"}
 
 
 def test_heldout_is_scored_once(ward: Path):

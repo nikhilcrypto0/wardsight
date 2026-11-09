@@ -18,6 +18,7 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `uv run wardsight-scan --split dev` — run the detection engine, flags into `ops.flags`
 - `uv run wardsight-bench --split dev` — score flags against the answer key
 - `uv run wardsight-bench --split heldout --final` — ONCE, at the very end; a rerun is refused
+- `uv run wardsight-queries --split dev [--llm --limit 3]` — draft physician queries into `ops.queries`
 
 ## Hard rules
 
@@ -39,3 +40,5 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `notes/` — LLM note writer with leak check and budget ledger; `template.py` offline stand-in
 - `engine/` — `evidence.py` rules, `documentation.py` note reader, `gaps.py` flags, `drg.py` MS-DRG v44
 - `bench.py` — scorer (reads `truth`); held-out scored once
+- `queries/` — `options.py` code-chosen answers, `lint.py` compliance gate, `draft.py` template +
+  OpenAI drafters with retry, `run.py` review queue. The AI writes only the question stem.
