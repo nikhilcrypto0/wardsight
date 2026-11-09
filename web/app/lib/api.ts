@@ -90,6 +90,48 @@ export interface AuditRow {
   detail: string;
 }
 
+export type UrStatus = "ok" | "observation_review" | "long_stay" | "explained_by_gap" | "no_benchmark";
+
+export interface UrRow {
+  encounter_id: string;
+  drg: number;
+  drg_description: string;
+  gmlos: number | null;
+  los_days: number;
+  midnights: number;
+  status: UrStatus;
+  note: string;
+  drg_if_documented: number | null;
+  gmlos_if_documented: number | null;
+}
+
+export interface UrBoard {
+  counts: Partial<Record<UrStatus, number>>;
+  rows: UrRow[];
+}
+
+export interface Leadership {
+  case_mix: { first_documented: number; current: number; if_all_resolved: number; cases: number };
+  queries: {
+    drafted: number;
+    sent: number;
+    answered: number;
+    resolved: number;
+    pending_review: number;
+    response_rate: number | null;
+    agreement_rate: number | null;
+  };
+  by_condition: {
+    condition: string;
+    gaps: number;
+    missing: number;
+    unsupported: number;
+    resolved: number;
+    weight_change: number;
+  }[];
+  weights_source: string;
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
@@ -119,5 +161,7 @@ export const api = {
     post<{ status: Status }>(`/api/queries/${queryId}/answer`, { option_index: optionIndex, comment }),
   simulate: (queryId: string) => post<{ status: Status }>(`/api/queries/${queryId}/simulate`),
   audit: () => call<AuditRow[]>("/api/audit"),
+  ur: () => call<UrBoard>("/api/ur"),
+  leadership: () => call<Leadership>("/api/leadership"),
   reset: () => post("/api/admin/reset"),
 };

@@ -12,24 +12,40 @@ puts a human approval step in front of anything that leaves the system.
 | CDI worklist | Chart with a compliant draft query |
 | --- | --- |
 | ![Worklist](docs/screenshots/worklist.jpg) | ![Chart and query](docs/screenshots/chart-query.jpg) |
+| **Utilization review** | **Leadership view** |
+| ![Utilization review](docs/screenshots/utilization-review.jpg) | ![Leadership](docs/screenshots/leadership.jpg) |
 
 ## Status
 
-| Milestone | Status (2026-11-08) |
+| Milestone | Status (2026-11-09) |
 | --- | --- |
 | 1. Data factory + answer key | Done (Synthea patients); LLM-written notes pending an API key |
 | 2. Detection rules + DRG impact | Done; scored on the dev set with template notes |
 | 3. Physician queries + rules check | Done; template drafter live, OpenAI drafter built and tested offline |
 | 4. Web app + physician agent | Done; rule-based physician agent (LLM version pending a key) |
 | 5. Ward replay + public demo build + video script | Done; hosting and recording pending ([deploy](docs/DEPLOY.md), [script](docs/DEMO_SCRIPT.md)) |
-| 6–7 | Not started |
+| 6. Utilization review + leadership view | Done |
+| 7. SMART on FHIR launch + Snowflake | Not started |
+
+## Utilization review and leadership (milestone 6)
+
+- **Utilization review:** every stay against the CMS two-midnight benchmark and the expected length of
+  stay (GMLOS) for its billing category. Stays that only look long because a diagnosis is missing are
+  marked "explained by a documentation gap": once documented, the true category's expected stay covers
+  them. On the dev ward: 21 long stays to review, 28 explained by a gap. (Every synthetic stay is at least
+  two days, so the two-midnight check never fires on this data.)
+- **Leadership:** case mix index (average billing weight) as first documented, now, and if every open gap
+  is resolved; the query funnel with response and agreement rates; results by condition. Weight points,
+  not dollars.
+- Weights and GMLOS: CMS IPPS FY2027 Table 5 (MS-DRG v44) for the 16 DRGs in the families this ward uses, in
+  `engine/drg_table.py` with their source. Verify against the CMS file before any real use.
 
 ## Ward replay (milestone 5)
 
-The dev ward over 14 days of admissions on a 78-bed unit. Every 6 hours the engine re-reads each chart
+The dev ward over 14 days of admissions on a 56-bed unit. Every 6 hours the engine re-reads each chart
 as it stood at that moment, so a gap is raised at the first hour its evidence exists, while the patient
 is still admitted. Queries are then approved, answered by the simulated physician, and the billing
-category updates. Over the replay: 75 gaps caught, 57 resolved, 42 billing categories corrected (some
+category updates. Over the replay: 75 gaps caught, 57 resolved, 41 billing categories corrected (some
 up, some down: unsupported diagnoses ruled out lower the bill).
 
 ```

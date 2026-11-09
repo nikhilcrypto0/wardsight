@@ -18,6 +18,8 @@ const NAV = IS_PUBLIC
       { href: "/replay", label: "Ward replay" },
       { href: "/", label: "CDI worklist" },
       { href: "/inbox", label: "Physician inbox" },
+      { href: "/ur", label: "Utilization review" },
+      { href: "/leadership", label: "Leadership" },
       { href: "/audit", label: "Audit log" },
     ];
 

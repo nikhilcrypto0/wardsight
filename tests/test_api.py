@@ -93,6 +93,19 @@ def test_edited_query_must_pass_the_rules_check(client):
     assert first(client, "sepsis", "missing_dx")["status"] == "pending_review"
 
 
+def test_ur_and_leadership_reflect_resolved_queries(client):
+    before = client.get("/api/leadership").json()
+    ur = client.get("/api/ur").json()
+    assert sum(ur["counts"].values()) == 200
+    q = first(client, "sepsis", "missing_dx")
+    client.post(f"/api/queries/{q['query_id']}/approve", json={})
+    client.post(f"/api/queries/{q['query_id']}/answer", json={"option_index": 0})
+    after = client.get("/api/leadership").json()
+    assert after["case_mix"]["current"] > before["case_mix"]["current"]
+    assert after["case_mix"]["first_documented"] == before["case_mix"]["first_documented"]
+    assert after["queries"]["resolved"] == 1 and after["queries"]["response_rate"] == 1.0
+
+
 def test_reject_simulate_audit_and_reset(client):
     rejected, sent = first(client, "arf", "missing_dx"), first(client, "abla", "missing_dx")
     client.post(f"/api/queries/{rejected['query_id']}/reject", json={"reason": "Already discussed on rounds"})

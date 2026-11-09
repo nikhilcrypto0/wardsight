@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 from dataclasses import replace
 from pathlib import Path
 
@@ -60,10 +61,22 @@ def detection_hour(chart: Chart, flag: Flag) -> float:
     return float(stay_h - 1)
 
 
+MEASURE = re.compile(r"^(?P<name>[A-Za-z][\w ]*?) (?P<value>\d[\d.]*) ?(?P<unit>\S*) at hour (?P<hour>[\d.]+)$")
+
+
 def headline_indicator(evidence: str) -> str:
-    """The most telling measured value for the live feed (not 'blood cultures drawn')."""
+    """The most telling measured value for the live feed (not 'blood cultures drawn').
+
+    When the evidence is a change in one measurement (hemoglobin falling, creatinine
+    rising), show both ends of the change, since the first value alone is normal.
+    """
     indicators = indicators_from_evidence(evidence) if evidence else ()
     measured = [i for i in indicators if any(ch.isdigit() for ch in i.split(" at hour")[0])]
+    if len(measured) >= 2:
+        a, b = MEASURE.match(measured[0]), MEASURE.match(measured[1])
+        if a and b and a["name"] == b["name"]:
+            return (f"{a['name']} {a['value']} to {b['value']} {b['unit']} "
+                    f"between hour {a['hour']} and {b['hour']}")
     return (measured or list(indicators) or [""])[0]
 
 

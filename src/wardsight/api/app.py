@@ -15,6 +15,7 @@ import duckdb
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from wardsight.api import reports
 from wardsight.engine.chart import load_charts
 from wardsight.engine.drg import coded_diagnoses, group
 from wardsight.queries.lint import lint_query
@@ -165,6 +166,16 @@ def create_app(db_path: Path) -> FastAPI:
     @app.post("/api/queries/{query_id}/simulate")
     def simulate(query_id: str) -> dict:
         return {"status": run_action(actions.simulate_answer, query_id)}
+
+    @app.get("/api/ur")
+    def utilization_review() -> dict:
+        with db() as con:
+            return reports.ur_board(con)
+
+    @app.get("/api/leadership")
+    def leadership_view() -> dict:
+        with db() as con:
+            return reports.leadership(con)
 
     @app.get("/api/audit")
     def audit_log() -> list[dict]:

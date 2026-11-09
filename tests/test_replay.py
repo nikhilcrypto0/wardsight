@@ -80,6 +80,9 @@ def test_feed_headline_is_a_measured_value():
         "MAP 61 mmHg at hour 0")
     assert headline_indicator("h1: creatinine 0.7 to 0.8 mg/dL across the stay") == (
         "creatinine 0.7 to 0.8 mg/dL across the stay")
+    # a change in one measurement shows both ends
+    assert headline_indicator("h1: hemoglobin 12.9 g/dL; h29: hemoglobin 9.8 g/dL; h31: Transfuse 1 unit") == (
+        "hemoglobin 12.9 to 9.8 g/dL between hour 1 and 29")
 
 
 def test_bed_assignment_reuses_freed_beds():

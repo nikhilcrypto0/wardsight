@@ -49,4 +49,7 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `queries/` — `options.py` code-chosen answers, `lint.py` compliance gate, `draft.py` template +
   OpenAI drafters with retry, `run.py` review queue. The AI writes only the question stem.
 - `workflow/` — `actions.py` review/send/answer/addendum/rescan + `ops.audit`; `physician.py` simulated physician
-- `api/app.py` — FastAPI; `web/` — Next.js screens (worklist, chart, inbox, audit)
+- `api/app.py` — FastAPI; `api/reports.py` — UR board + leadership metrics
+- `engine/ur.py` — two-midnight + GMLOS review, case mix; `engine/drg_table.py` — v44 weights/GMLOS (sourced)
+- `replay.py` — ward replay timeline; `web/` — Next.js screens (replay, worklist, chart, inbox, UR,
+  leadership, audit); public mode shows only the replay

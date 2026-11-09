@@ -181,8 +181,18 @@ def plan_condition(rng: random.Random, base: Baseline, patient: PatientSeed,
     return builders[condition](rng, base, patient, evidence)
 
 
+def _los(rng: random.Random, evidence: str, meets: tuple[int, int], other: tuple[int, int]) -> int:
+    """Length of stay in days, near the MS-DRG expected stay (GMLOS, 2-5 days for these DRGs).
+
+    A stay with a real acute complication runs a little longer than one without.
+    Every range keeps the lab draws each scenario depends on inside the stay.
+    """
+    low, high = meets if evidence == EVIDENCE_MEETS else other
+    return rng.randint(low, high)
+
+
 def _aki(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> Plan:
-    los = rng.randint(4, 6)
+    los = _los(rng, evidence, (3, 5), (2, 4))
     cr = b.creatinine
     events: tuple[Event, ...] = ()
     if evidence == EVIDENCE_MEETS:
@@ -202,7 +212,7 @@ def _aki(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> Plan
 
 def _sepsis(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> Plan:
     if evidence == EVIDENCE_MEETS:
-        los = rng.randint(5, 7)
+        los = rng.randint(4, 6)
         curves = {
             "temp": [(0, 39.0), (18, 38.6), (36, 37.3)],
             "heart_rate": [(0, 116), (24, 100), (48, 86)],
@@ -222,7 +232,7 @@ def _sepsis(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> P
               for t in range(2, los * 24, 6)),
         )
     elif evidence == EVIDENCE_NEAR_MISS:
-        los = rng.randint(3, 5)
+        los = rng.randint(2, 4)
         curves = {
             "temp": [(0, 38.5), (24, 37.4)],
             "heart_rate": [(0, 99), (24, 84)],
@@ -236,7 +246,7 @@ def _sepsis(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> P
               for t in range(2, los * 24, 24)),
         )
     else:
-        los = rng.randint(3, 5)
+        los = rng.randint(2, 4)
         curves = {"temp": [(0, 37.4), (24, 37.0)]}
         events = tuple(Event(float(t), "med", "ceftriaxone", text="Ceftriaxone 1 g IV")
                        for t in range(2, los * 24, 24))
@@ -244,7 +254,7 @@ def _sepsis(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> P
 
 
 def _hyponatremia(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> Plan:
-    los = rng.randint(3, 5)
+    los = _los(rng, evidence, (3, 5), (2, 3))
     if evidence == EVIDENCE_MEETS:
         na0 = rng.randint(124, 130)
         curve = [(0, na0), (24, na0 + 3), (48, na0 + 6), (los * 24.0, min(136, na0 + 9))]
@@ -257,7 +267,7 @@ def _hyponatremia(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str
 
 
 def _abla(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> Plan:
-    los = rng.randint(3, 5)
+    los = _los(rng, evidence, (3, 4), (2, 3))
     h0 = b.hemoglobin
     if evidence == EVIDENCE_MEETS:
         drop = rng.uniform(2.6, 3.4)
@@ -276,7 +286,7 @@ def _abla(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> Pla
 
 def _arf(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> Plan:
     if evidence == EVIDENCE_MEETS:
-        los = rng.randint(4, 6)
+        los = rng.randint(3, 5)
         curves = {"spo2": [(0, 87), (3, 93), (48, 94)],
                   "resp_rate": [(0, 31), (24, 26), (48, 20), (72, 17)]}
         hfnc = rng.random() < 0.3
@@ -285,7 +295,7 @@ def _arf(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> Plan
         events = (Event(1.0, "lab", "pao2", round(rng.uniform(52, 58))),
                   Event(2.0, "order", "oxygen", text=text))
         return Plan(los, curves, o2, (), events)
-    los = rng.randint(3, 5)
+    los = rng.randint(2, 3)
     if evidence == EVIDENCE_NEAR_MISS:
         curves = {"spo2": [(0, 92.6), (8, 95)], "resp_rate": [(0, 21), (24, 17)]}
         events = (Event(6.0, "order", "oxygen", text="Oxygen 2 L/min nasal cannula for comfort"),)
@@ -294,7 +304,7 @@ def _arf(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> Plan
 
 
 def _hf(rng: random.Random, b: Baseline, p: PatientSeed, evidence: str) -> Plan:
-    los = rng.randint(4, 6)
+    los = _los(rng, evidence, (3, 5), (2, 4))
     if evidence == EVIDENCE_MEETS:
         lvef = round(rng.uniform(25, 35))
         events = (
