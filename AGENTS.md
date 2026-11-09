@@ -19,6 +19,10 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `uv run wardsight-bench --split dev` — score flags against the answer key
 - `uv run wardsight-bench --split heldout --final` — ONCE, at the very end; a rerun is refused
 - `uv run wardsight-queries --split dev [--llm --limit 3]` — draft physician queries into `ops.queries`
+- `uv run wardsight-api` — HTTP API on :8000 (dev split only)
+- `cd web && npm run dev` — web app on :3000 (proxies /api to :8000); `npm run build` + `npx tsc --noEmit` to check
+- `web/` is **Next.js 16** with Cache Components: read `web/AGENTS.md` and `web/node_modules/next/dist/docs/`
+  before changing it; client views that read URL params need a `Suspense` boundary
 
 ## Hard rules
 
@@ -42,3 +46,5 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `bench.py` — scorer (reads `truth`); held-out scored once
 - `queries/` — `options.py` code-chosen answers, `lint.py` compliance gate, `draft.py` template +
   OpenAI drafters with retry, `run.py` review queue. The AI writes only the question stem.
+- `workflow/` — `actions.py` review/send/answer/addendum/rescan + `ops.audit`; `physician.py` simulated physician
+- `api/app.py` — FastAPI; `web/` — Next.js screens (worklist, chart, inbox, audit)

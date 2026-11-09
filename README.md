@@ -14,7 +14,20 @@ puts a human approval step in front of anything that leaves the system.
 | 1. Data factory + answer key | Done (Synthea patients); LLM-written notes pending an API key |
 | 2. Detection rules + DRG impact | Done; scored on the dev set with template notes |
 | 3. Physician queries + rules check | Done; template drafter live, OpenAI drafter built and tested offline |
-| 4–7 | Not started |
+| 4. Web app + physician agent | Done; rule-based physician agent (LLM version pending a key) |
+| 5–7 | Not started |
+
+## The web app (milestone 4)
+
+A reviewer works the CDI worklist, opens a chart (evidence, trends, notes), edits a draft query while
+the rules check updates live, and approves it. The physician answers in their inbox (or a simulated
+physician replies). The answer becomes a note addendum, the chart is rescanned, and the billing
+category updates. Every step lands in an append-only audit log.
+
+```
+uv run wardsight-api                          # http://127.0.0.1:8000
+cd web && npm install && npm run dev          # http://localhost:3000
+```
 
 ## The detection engine (milestone 2)
 
