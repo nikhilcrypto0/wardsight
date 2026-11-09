@@ -25,7 +25,18 @@ puts a human approval step in front of anything that leaves the system.
 | 4. Web app + physician agent | Done; rule-based physician agent (LLM version pending a key) |
 | 5. Ward replay + public demo build + video script | Done; hosting and recording pending ([deploy](docs/DEPLOY.md), [script](docs/DEMO_SCRIPT.md)) |
 | 6. Utilization review + leadership view | Done |
-| 7. SMART on FHIR launch + Snowflake | Not started |
+| 7. FHIR import, SMART on FHIR launch, Snowflake | FHIR import done; Epic sandbox launch and Snowflake need accounts |
+
+## Reading real FHIR data (milestone 7, part 1)
+
+`wardsight-fhir` turns FHIR R4 (the format Epic exposes) back into a chart and runs the evidence rules.
+Round trip: all 200 dev charts exported to FHIR and imported back give identical results for all six
+rules. It also reads a live open FHIR server, mapping labs and vitals by LOINC code:
+
+```
+uv run wardsight-fhir --bundle data/fhir/dev/D0011.json
+uv run wardsight-fhir --server https://r4.smarthealthit.org --patient <id>   # public SMART sandbox
+```
 
 ## Utilization review and leadership (milestone 6)
 

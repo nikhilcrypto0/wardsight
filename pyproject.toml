@@ -22,6 +22,7 @@ wardsight-bench = "wardsight.bench:main"
 wardsight-queries = "wardsight.queries.run:main"
 wardsight-api = "wardsight.api.app:main"
 wardsight-replay = "wardsight.replay:main"
+wardsight-fhir = "wardsight.fhir_import:main"
 
 [dependency-groups]
 dev = [
