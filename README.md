@@ -7,6 +7,8 @@ puts a human approval step in front of anything that leaves the system.
 
 **Everything runs on a synthetic hospital. No real patient data. Demo, not for clinical use.**
 
+**Live demo (ward replay): https://wardsight.vercel.app**
+
 ![Ward replay: 200 synthetic patients, gaps caught while they are still admitted](docs/screenshots/ward-replay.jpg)
 
 | CDI worklist | Chart with a compliant draft query |

@@ -14,7 +14,9 @@ const nextConfig: NextConfig = {
     },
   },
   // The Python API (FastAPI) serves /api; the browser only ever talks to this app.
+  // The hosted public demo has no API at all, so nothing is forwarded there.
   rewrites() {
+    if (process.env.NEXT_PUBLIC_WARDSIGHT_MODE === "public") return [];
     return [{ source: "/api/:path*", destination: `${API_ORIGIN}/api/:path*` }];
   },
 };
