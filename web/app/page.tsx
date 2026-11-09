@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import ReplayView from "./components/ReplayView";
 import { api, type Status, type Summary, type WorklistRow } from "./lib/api";
+import { IS_PUBLIC } from "./lib/mode";
 import { CONDITION, DrgShift, KindBadge, StatusBadge } from "./lib/labels";
 
 const FILTERS: { key: "all" | Status; label: string }[] = [
@@ -22,7 +24,11 @@ function Stat({ value, label, tone = "text-slate-900" }: { value: number; label:
   );
 }
 
-export default function WorklistPage() {
+export default function HomePage() {
+  return IS_PUBLIC ? <ReplayView linkCharts={false} /> : <WorklistPage />;
+}
+
+function WorklistPage() {
   const [rows, setRows] = useState<WorklistRow[] | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [filter, setFilter] = useState<"all" | Status>("all");

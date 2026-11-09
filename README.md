@@ -7,6 +7,12 @@ puts a human approval step in front of anything that leaves the system.
 
 **Everything runs on a synthetic hospital. No real patient data. Demo, not for clinical use.**
 
+![Ward replay: 200 synthetic patients, gaps caught while they are still admitted](docs/screenshots/ward-replay.jpg)
+
+| CDI worklist | Chart with a compliant draft query |
+| --- | --- |
+| ![Worklist](docs/screenshots/worklist.jpg) | ![Chart and query](docs/screenshots/chart-query.jpg) |
+
 ## Status
 
 | Milestone | Status (2026-11-08) |
@@ -15,7 +21,20 @@ puts a human approval step in front of anything that leaves the system.
 | 2. Detection rules + DRG impact | Done; scored on the dev set with template notes |
 | 3. Physician queries + rules check | Done; template drafter live, OpenAI drafter built and tested offline |
 | 4. Web app + physician agent | Done; rule-based physician agent (LLM version pending a key) |
-| 5–7 | Not started |
+| 5. Ward replay + public demo build + video script | Done; hosting and recording pending ([deploy](docs/DEPLOY.md), [script](docs/DEMO_SCRIPT.md)) |
+| 6–7 | Not started |
+
+## Ward replay (milestone 5)
+
+The dev ward over 14 days of admissions on a 78-bed unit. Every 6 hours the engine re-reads each chart
+as it stood at that moment, so a gap is raised at the first hour its evidence exists, while the patient
+is still admitted. Queries are then approved, answered by the simulated physician, and the billing
+category updates. Over the replay: 75 gaps caught, 57 resolved, 42 billing categories corrected (some
+up, some down: unsupported diagnoses ruled out lower the bill).
+
+```
+uv run wardsight-replay                 # writes web/public/replay.json
+```
 
 ## The web app (milestone 4)
 

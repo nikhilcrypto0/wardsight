@@ -20,6 +20,8 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `uv run wardsight-bench --split heldout --final` — ONCE, at the very end; a rerun is refused
 - `uv run wardsight-queries --split dev [--llm --limit 3]` — draft physician queries into `ops.queries`
 - `uv run wardsight-api` — HTTP API on :8000 (dev split only)
+- `uv run wardsight-replay` — rebuild `web/public/replay.json` (the hosted demo's only data)
+- `NEXT_PUBLIC_WARDSIGHT_MODE=public npm run build` (in `web/`) — the hosted demo build; see `docs/DEPLOY.md`
 - `cd web && npm run dev` — web app on :3000 (proxies /api to :8000); `npm run build` + `npx tsc --noEmit` to check
 - `web/` is **Next.js 16** with Cache Components: read `web/AGENTS.md` and `web/node_modules/next/dist/docs/`
   before changing it; client views that read URL params need a `Suspense` boundary

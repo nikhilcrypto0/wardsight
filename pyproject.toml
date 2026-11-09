@@ -21,6 +21,7 @@ wardsight-scan = "wardsight.engine.scan:main"
 wardsight-bench = "wardsight.bench:main"
 wardsight-queries = "wardsight.queries.run:main"
 wardsight-api = "wardsight.api.app:main"
+wardsight-replay = "wardsight.replay:main"
 
 [dependency-groups]
 dev = [
