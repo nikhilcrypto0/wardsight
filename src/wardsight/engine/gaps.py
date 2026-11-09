@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from wardsight.engine.chart import Chart
-from wardsight.engine.documentation import find_mentions
+from wardsight.engine.documentation import documented_codes, find_mentions
 from wardsight.engine.drg import DrgResult, coded_diagnoses, group
 from wardsight.engine.evidence import RULES, Evidence, relevant_values
 
@@ -33,7 +33,7 @@ class Flag:
 
 def find_flags(chart: Chart) -> list[Flag]:
     mentions = find_mentions(chart.notes)
-    affirmed = {m.icd10 for m in mentions if not m.negated}
+    affirmed = documented_codes(chart.notes)
     codes_now = coded_diagnoses(chart)
     drg_now = group(chart, codes_now)
     flags: list[Flag] = []

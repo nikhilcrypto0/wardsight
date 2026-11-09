@@ -31,14 +31,33 @@ def scan(con: duckdb.DuckDBPyConnection, split: str) -> list[Flag]:
     if charts and not any(c.notes for c in charts):
         raise SystemExit("No notes found. Run `wardsight-notes --template` (or the LLM writer) first.")
     flags = [f for chart in charts for f in find_flags(chart)]
+    _insert(con, split, flags)
+    log.info("%s: %d charts scanned, %d flags %s", split, len(charts), len(flags),
+             dict(Counter(f.kind for f in flags)))
+    return flags
+
+
+def scan_encounter(con: duckdb.DuckDBPyConnection, encounter_id: str) -> list[Flag]:
+    """Re-run the engine for one chart (after a physician addendum) and replace its flags."""
+    con.execute(FLAGS_DDL)
+    charts = load_charts(con, encounter_id=encounter_id)
+    if not charts:
+        raise KeyError(encounter_id)
+    chart = charts[0]
+    flags = find_flags(chart)
+    con.execute("DELETE FROM ops.flags WHERE encounter_id = ?", [encounter_id])
+    _insert(con, chart.split, flags)
+    return flags
+
+
+def _insert(con: duckdb.DuckDBPyConnection, split: str, flags: list[Flag]) -> None:
+    if not flags:  # a fully resolved chart has none; executemany rejects an empty list
+        return
     con.executemany("INSERT INTO ops.flags VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
         (f.encounter_id, split, f.condition, f.kind, f.icd10, f.detail, f.evidence,
          f.drg_now.drg, f.drg_now.description, f.drg_now.severity,
          f.drg_if_resolved.drg, f.drg_if_resolved.description, f.drg_if_resolved.severity)
         for f in flags])
-    log.info("%s: %d charts scanned, %d flags %s", split, len(charts), len(flags),
-             dict(Counter(f.kind for f in flags)))
-    return flags
 
 
 def main() -> None:

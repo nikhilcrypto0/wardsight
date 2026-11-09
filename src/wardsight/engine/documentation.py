@@ -29,8 +29,10 @@ LEXICON: dict[str, tuple[str, ...]] = {
 
 PRE_NEGATION = ("no evidence of", "negative for", "ruled out", "rule out", "without", "denies",
                 "not in", "not", "no")
-POST_NEGATION = ("ruled out", "was ruled out", "unlikely", "is not present", "excluded")
+POST_NEGATION = ("ruled out", "was ruled out", "has been ruled out", "unlikely", "is not present",
+                 "excluded")
 CLAUSE_SPLIT = re.compile(r"[.;\n]")
+ADDENDUM = "addendum"  # a physician's later clarification; it overrides earlier notes
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,7 @@ class Mention:
     phrase: str
     negated: bool
     clause: str
+    addendum: bool = False
 
 
 def _phrase_re(phrase: str) -> re.Pattern[str]:
@@ -69,10 +72,18 @@ def find_mentions(notes: tuple[NoteText, ...]) -> list[Mention]:
                         continue  # part of a longer phrase already matched
                     taken.append((m.start(), m.end()))
                     mentions.append(Mention(code, phrase, _is_negated(clause, m.start(), m.end()),
-                                            clause.strip()))
+                                            clause.strip(), note.note_type == ADDENDUM))
     return mentions
 
 
 def documented_codes(notes: tuple[NoteText, ...]) -> set[str]:
-    """Codes stated as present (affirmed) anywhere in the notes."""
-    return {m.icd10 for m in find_mentions(notes) if not m.negated}
+    """Codes the record currently affirms.
+
+    Affirmed anywhere in the notes, except that a physician addendum wins: a
+    code the addendum rules out is removed, a code it confirms is added.
+    """
+    mentions = find_mentions(notes)
+    affirmed = {m.icd10 for m in mentions if not m.negated and not m.addendum}
+    ruled_out = {m.icd10 for m in mentions if m.negated and m.addendum}
+    confirmed = {m.icd10 for m in mentions if not m.negated and m.addendum}
+    return (affirmed - ruled_out) | confirmed

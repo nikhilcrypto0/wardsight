@@ -33,15 +33,32 @@ from wardsight.queries.draft import (
 log = logging.getLogger("wardsight.queries")
 
 QUERIES_DDL = """CREATE SCHEMA IF NOT EXISTS ops;
-CREATE TABLE IF NOT EXISTS ops.queries (encounter_id VARCHAR, split VARCHAR, condition VARCHAR,
-    kind VARCHAR, stem VARCHAR, options VARCHAR, indicators VARCHAR, drafter VARCHAR,
-    attempts INTEGER, passed_check BOOLEAN, problems VARCHAR, status VARCHAR, created_ts TIMESTAMP)"""
+CREATE TABLE IF NOT EXISTS ops.queries (query_id VARCHAR PRIMARY KEY, encounter_id VARCHAR,
+    split VARCHAR, condition VARCHAR, kind VARCHAR, stem VARCHAR, options VARCHAR, indicators VARCHAR,
+    drafter VARCHAR, attempts INTEGER, passed_check BOOLEAN, problems VARCHAR, status VARCHAR,
+    created_ts TIMESTAMP, updated_ts TIMESTAMP, answer VARCHAR, answer_comment VARCHAR,
+    answered_by VARCHAR, drg_before INTEGER, drg_after INTEGER)"""
+
+
+def ensure_queries_table(con: duckdb.DuckDBPyConnection) -> None:
+    """Create ops.queries; rebuild it if an older layout (no query_id) is found."""
+    con.execute("CREATE SCHEMA IF NOT EXISTS ops")
+    columns = {r[0] for r in con.execute(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_schema = 'ops' AND table_name = 'queries'").fetchall()}
+    if columns and "query_id" not in columns:
+        con.execute("DROP TABLE ops.queries")
+    con.execute(QUERIES_DDL)
+
+
+def query_id(encounter_id: str, condition: str, kind: str) -> str:
+    return f"{encounter_id}-{condition}-{kind.split('_')[0]}"
 
 
 def draft_all(con: duckdb.DuckDBPyConnection, split: str, drafter: Drafter, name: str,
               attempts: int, ledger: Ledger | None = None, model: str = "",
               limit: int | None = None) -> list[QueryResult]:
-    con.execute(QUERIES_DDL)
+    ensure_queries_table(con)
     con.execute("DELETE FROM ops.queries WHERE split = ?", [split])
     flags = con.execute("SELECT encounter_id, condition, kind, detail, evidence FROM ops.flags "
                         "WHERE split = ? ORDER BY encounter_id, condition", [split]).fetchall()
@@ -51,11 +68,17 @@ def draft_all(con: duckdb.DuckDBPyConnection, split: str, drafter: Drafter, name
             results.append(draft_query(make_request(*row), drafter, name, attempts, ledger, model))
     except BudgetExceeded as exc:
         log.error("HALTED: %s", exc)
-    con.executemany("INSERT INTO ops.queries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-        (r.request.encounter_id, split, r.request.condition, r.request.kind, r.stem,
-         json.dumps(r.request.options), json.dumps(r.request.indicators), r.drafter, r.attempts,
-         r.lint.ok, json.dumps(r.lint.problems), "pending_review" if r.lint.ok else "needs_rewrite",
-         datetime.now()) for r in results])
+    now = datetime.now()
+    if results:
+        con.executemany(
+            "INSERT INTO ops.queries (query_id, encounter_id, split, condition, kind, stem, options, "
+            "indicators, drafter, attempts, passed_check, problems, status, created_ts, updated_ts) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+                (query_id(r.request.encounter_id, r.request.condition, r.request.kind), r.request.encounter_id,
+                 split, r.request.condition, r.request.kind, r.stem, json.dumps(r.request.options),
+                 json.dumps(r.request.indicators), r.drafter, r.attempts, r.lint.ok,
+                 json.dumps(r.lint.problems), "pending_review" if r.lint.ok else "needs_rewrite", now, now)
+                for r in results])
     log.info("%s: %d queries drafted by %s; %s; first-draft pass %d/%d", split, len(results), name,
              dict(Counter("passed" if r.lint.ok else "needs_rewrite" for r in results)),
              sum(r.lint.ok and r.attempts == 1 for r in results), len(results))

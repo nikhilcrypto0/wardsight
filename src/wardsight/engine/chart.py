@@ -42,8 +42,14 @@ class Chart:
         return [(e.t_hours, e.text) for e in self.events if e.text and (not kinds or e.kind in kinds)]
 
 
-def load_charts(con: duckdb.DuckDBPyConnection, split: str | None = None) -> list[Chart]:
-    where, params = ("WHERE e.split = ?", [split]) if split else ("", [])
+def load_charts(con: duckdb.DuckDBPyConnection, split: str | None = None,
+                encounter_id: str | None = None) -> list[Chart]:
+    if encounter_id:
+        where, params = "WHERE e.encounter_id = ?", [encounter_id]
+    elif split:
+        where, params = "WHERE e.split = ?", [split]
+    else:
+        where, params = "", []
     encounters = con.execute(f"""
         SELECT e.encounter_id, e.split, p.age, p.sex, e.los_days, e.reason_for_admission, e.patient_id
         FROM ehr.encounters e JOIN ehr.patients p USING (patient_id) {where}

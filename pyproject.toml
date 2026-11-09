@@ -6,10 +6,12 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "duckdb>=1.1",
+    "fastapi>=0.162.2",
     "msdrg>=1.2.0",
     "openai>=1.99",
     "pydantic>=2.7",
     "python-dotenv>=1.0",
+    "uvicorn>=0.30",
 ]
 
 [project.scripts]
@@ -18,9 +20,15 @@ wardsight-notes = "wardsight.notes.writer:main"
 wardsight-scan = "wardsight.engine.scan:main"
 wardsight-bench = "wardsight.bench:main"
 wardsight-queries = "wardsight.queries.run:main"
+wardsight-api = "wardsight.api.app:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "fhir.resources>=8", "ruff>=0.6"]
+dev = [
+    "pytest>=8",
+    "fhir.resources>=8",
+    "ruff>=0.6",
+    "httpx>=0.28.1",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.16,<0.12.0"]
