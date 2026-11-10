@@ -1,5 +1,7 @@
 # WardSight
 
+![WardSight](web/app/opengraph-image.jpg)
+
 An AI command center for hospital clinical documentation integrity (CDI) that works while
 patients are still admitted. It finds conditions the evidence supports but the notes never
 name, flags diagnoses the evidence does not support, drafts compliant physician queries, and

@@ -1,0 +1,1 @@
+WardSight: AI clinical documentation integrity on a synthetic hospital ward
