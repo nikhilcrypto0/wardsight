@@ -5,6 +5,8 @@ const API_ORIGIN = process.env.WARDSIGHT_API_ORIGIN ?? "http://127.0.0.1:8000";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  // WARDSIGHT_RECORDING=1 npm run dev hides the Next.js dev badge for screen recordings.
+  devIndicators: process.env.WARDSIGHT_RECORDING === "1" ? false : {},
   turbopack: {
     rules: {
       "*.css": {

@@ -21,6 +21,7 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `uv run wardsight-queries --split dev [--llm --limit 3]` — draft physician queries into `ops.queries`
 - `uv run wardsight-api` — HTTP API on :8000 (dev split only)
 - `uv run wardsight-replay` — rebuild `web/public/replay.json` (the hosted demo's only data)
+- `scripts/media/` — demo videos, video kit and thumbnail from real output; see `scripts/media/README.md`
 - `uv run wardsight-fhir --bundle <file> | --server <url> --patient <id>` — evidence rules on FHIR R4 data
 - `NEXT_PUBLIC_WARDSIGHT_MODE=public npm run build` (in `web/`) — the hosted demo build; see `docs/DEPLOY.md`
 - `cd web && npm run dev` — web app on :3000 (proxies /api to :8000); `npm run build` + `npx tsc --noEmit` to check

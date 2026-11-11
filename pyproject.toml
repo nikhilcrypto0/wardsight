@@ -30,6 +30,7 @@ dev = [
     "fhir.resources>=8",
     "ruff>=0.6",
     "httpx>=0.28.1",
+    "pillow>=13.0.0",
 ]
 
 [build-system]

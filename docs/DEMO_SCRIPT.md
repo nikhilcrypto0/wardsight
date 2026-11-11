@@ -7,7 +7,7 @@ Before recording:
 
 ```
 uv run wardsight-api                    # terminal 1
-cd web && npm run dev                   # terminal 2, then open http://localhost:3000
+cd web && WARDSIGHT_RECORDING=1 npm run dev   # terminal 2 (hides the dev badge), open http://localhost:3000
 ```
 
 | Time | Screen | Do | Say (plain, your own words) |
@@ -34,3 +34,6 @@ Keep it under 3:00. Re-record any segment rather than cutting mid-sentence.
 - Dev-set detection score (75/75, 0 false alarms) uses template notes, the easy case. Do not quote it as
   clinical accuracy. The held-out set is scored once, at the end.
 - The physician is simulated (rule-based). Say "simulated physician".
+
+After recording: `cd scripts/media && uv run --project ../.. python video_kit.py cards`, then
+`... video_kit.py stitch <your clips> -o wardsight-demo.mp4` adds the intro and outro cards.
