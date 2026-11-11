@@ -91,7 +91,8 @@ function WorklistPage() {
             </button>
           ))}
         </div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
           <thead className="text-left text-xs uppercase tracking-wide text-slate-500 bg-slate-50">
             <tr>
               <th className="px-4 py-2.5 font-medium">Patient</th>
@@ -132,6 +133,7 @@ function WorklistPage() {
             ))}
           </tbody>
         </table>
+        </div>
         {shown.length === 0 && <p className="p-6 text-sm text-slate-500">Nothing in this view.</p>}
       </section>
     </div>

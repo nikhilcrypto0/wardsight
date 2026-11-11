@@ -19,6 +19,7 @@ const NAV = [
   { href: "/ur", label: "Utilization review" },
   { href: "/leadership", label: "Leadership" },
   { href: "/replay", label: "Ward replay" },
+  { href: "/evaluation", label: "Evaluation" },
   { href: "/audit", label: "Audit log" },
 ];
 
@@ -30,11 +31,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Synthetic data only. No real patients. Demo, not for clinical use.
         </div>
         <header className="bg-white border-b border-slate-200">
-          <div className="mx-auto max-w-7xl px-6 h-14 flex items-center gap-8">
+          <div className="mx-auto max-w-7xl px-6 h-14 flex items-center gap-6 md:gap-8">
             <Link href="/" className="font-semibold tracking-tight text-slate-900">
               WardSight
             </Link>
-            <nav className="flex gap-1 text-sm">
+            <nav className="flex gap-1 overflow-x-auto whitespace-nowrap text-sm">
               {NAV.map((item) => (
                 <Link
                   key={item.href}

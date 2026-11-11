@@ -9,7 +9,11 @@ puts a human approval step in front of anything that leaves the system.
 
 **Everything runs on a synthetic hospital. No real patient data. Demo, not for clinical use.**
 
-**Live demo (ward replay): https://wardsight.vercel.app**
+**Live demo: https://wardsight.vercel.app**: the whole app, running in your browser. Open a patient,
+edit the draft query while the compliance check re-runs, approve it, let the physician answer, and
+watch the billing category update. [How it is tested, and what is not proven yet](https://wardsight.vercel.app/evaluation).
+
+![CI](https://github.com/nikhilcrypto0/wardsight/actions/workflows/ci.yml/badge.svg)
 
 ![Ward replay: 200 synthetic patients, gaps caught while they are still admitted](docs/screenshots/ward-replay.jpg)
 
@@ -21,15 +25,27 @@ puts a human approval step in front of anything that leaves the system.
 
 ## Status
 
-| Milestone | Status (2026-11-09) |
+| Milestone | Status (2026-11-10) |
 | --- | --- |
 | 1. Data factory + answer key | Done (Synthea patients); LLM-written notes pending an API key |
 | 2. Detection rules + DRG impact | Done; scored on the dev set with template notes |
 | 3. Physician queries + rules check | Done; template drafter live, OpenAI drafter built and tested offline |
 | 4. Web app + physician agent | Done; rule-based physician agent (LLM version pending a key) |
-| 5. Ward replay + public demo build + video script | Done; hosting and recording pending ([deploy](docs/DEPLOY.md), [script](docs/DEMO_SCRIPT.md)) |
+| 5. Ward replay + public demo + video script | Done; the hosted demo runs the full workflow in the browser ([deploy](docs/DEPLOY.md), [script](docs/DEMO_SCRIPT.md)) |
 | 6. Utilization review + leadership view | Done |
 | 7. FHIR import, SMART on FHIR launch, Snowflake | FHIR import done; Epic sandbox launch and Snowflake need accounts |
+
+## The hosted demo: the full app with no server
+
+The public site has no Python API and makes no AI calls, yet every screen works. `uv run wardsight-demo`
+runs the real workflow on a copy of the database: for every query and every answer a physician could
+give, it approves, answers and rescans inside a transaction, records what changed, and rolls back. The
+browser (`web/app/lib/demo.ts`) replays those outcomes; each visitor's clicks stay in their own browser.
+
+Two tests keep the browser honest (`cd web && npm test`, also in CI):
+- the browser copy of the compliance check gives the same verdict as the Python one on 2,250 cases;
+- working all 75 queries in the browser lands on exactly the engine's totals (statuses, open gaps, case
+  mix, utilization review).
 
 ## Reading real FHIR data (milestone 7, part 1)
 

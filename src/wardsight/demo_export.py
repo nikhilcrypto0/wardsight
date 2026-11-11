@@ -17,18 +17,22 @@ import argparse
 import json
 import shutil
 import tempfile
+from collections import Counter
 from dataclasses import asdict, replace
 from pathlib import Path
 
 import duckdb
 from fastapi.encoders import jsonable_encoder
 
+from wardsight import criteria as c
 from wardsight.api import reports
 from wardsight.api.app import REVIEWER, encounter_payload, rows, worklist_rows
+from wardsight.bench import score
 from wardsight.engine.chart import Chart, load_charts
 from wardsight.engine.documentation import LEXICON
 from wardsight.engine.drg import coded_diagnoses, group
 from wardsight.engine.drg_table import facts
+from wardsight.engine.evidence import ARF_MIN_INDICATORS, SERIAL_DRAWS_48H
 from wardsight.engine.gaps import find_flags
 from wardsight.engine.ur import codes_if_resolved, review
 from wardsight.queries.lint import TARGET_CODE, lint_query
@@ -52,6 +56,31 @@ MUTATIONS = (
     lambda s: s + " " + "x" * 700,
     lambda s: s + " Cost of care is a concern ($).",
 )
+
+
+def clinical_rules() -> list[dict]:
+    """What each evidence rule checks, built from the same constants the rules use."""
+    return [
+        {"condition": "Sepsis", "source": "Sepsis-3 (Singer et al., JAMA 2016)",
+         "rule": (f"Suspected infection (blood cultures and antibiotics) plus a SOFA rise of at least "
+                  f"{c.SEPSIS_SOFA_DELTA}: MAP < {c.SOFA_MAP_MMHG} mmHg, platelets < {c.SOFA_PLATELETS_K} K/uL, "
+                  f"bilirubin ≥ {c.SOFA_BILIRUBIN_MG_DL} mg/dL, creatinine rise from the patient's own low")},
+        {"condition": "Acute kidney injury", "source": "KDIGO 2012 AKI guideline",
+         "rule": (f"Creatinine up ≥ {c.AKI_ABS_RISE_MG_DL} mg/dL within {c.AKI_ABS_WINDOW_H} h, or to "
+                  f"≥ {c.AKI_REL_RISE}x an earlier value within 7 days. A stable high baseline (CKD) does not count")},
+        {"condition": "Hyponatremia", "source": "Serum sodium < 135 mmol/L (standard definition)",
+         "rule": (f"Sodium < {c.HYPONATREMIA_NA_MMOL_L} mmol/L that was clinically significant: treated "
+                  f"(fluid restriction, salt tablets, tolvaptan, hypertonic saline) or checked "
+                  f"≥ {SERIAL_DRAWS_48H} times in 48 h")},
+        {"condition": "Acute blood loss anemia", "source": "Common CDI clinical indicators",
+         "rule": (f"Hemoglobin drop ≥ {c.ABLA_HGB_DROP_G_DL:g} g/dL with a documented bleeding source "
+                  f"or a transfusion")},
+        {"condition": "Acute hypoxic respiratory failure", "source": "Common CDI clinical indicators",
+         "rule": (f"At least {ARF_MIN_INDICATORS} of: SpO2 < {c.ARF_SPO2_PCT}% on room air, PaO2 < "
+                  f"{c.ARF_PAO2_MMHG} mmHg, respiratory rate > {c.ARF_RR_PER_MIN}/min; plus oxygen therapy")},
+        {"condition": "Acute systolic heart failure", "source": "2022 AHA/ACC/HFSA guideline; ESC BNP guidance",
+         "rule": (f"LVEF ≤ {c.HFREF_LVEF_PCT}%, BNP > {c.HF_BNP_PG_ML} pg/mL and an IV loop diuretic")},
+    ]
 
 
 def _drgs(chart: Chart) -> list[int]:
@@ -109,6 +138,9 @@ def export(db_path: Path, out: Path, cases_path: Path) -> dict:
         case_mix: dict[str, list[int]] = {}
         for chart in load_charts(con, SPLIT):
             payload = jsonable_encoder(encounter_payload(con, chart.encounter_id))
+            # drop the reset's wall-clock timestamps so a re-export only changes what really changed
+            payload["queries"] = [{k: v for k, v in q.items() if k not in ("created_ts", "updated_ts")}
+                                  for q in payload["queries"]]
             (enc_dir / f"{chart.encounter_id}.json").write_text(json.dumps(payload, separators=(",", ":")))
             case_mix[chart.encounter_id] = _drgs(chart)
 
@@ -136,13 +168,25 @@ def export(db_path: Path, out: Path, cases_path: Path) -> dict:
             d for q in queries.values() for o in q["outcomes"] for d in (*o["drgs"], o["drg_before"], o["drg_after"])}
         index = {
             "charts": len(case_mix), "physician": PHYSICIAN, "reviewer": REVIEWER,
-            "worklist": worklist_rows(con), "queries": queries, "ur": reports.ur_board(con),
+            "worklist": [{k: v for k, v in r.items() if k != "updated_ts"} for r in worklist_rows(con)], "queries": queries, "ur": reports.ur_board(con),
             "case_mix_drgs": case_mix,
             "weights": {str(d): f.weight for d in sorted(x for x in drgs if x) if (f := facts(d))},
             "weights_source": reports.leadership(con)["weights_source"],
             "lint_targets": {c: list(LEXICON[code]) for c, code in TARGET_CODE.items()},
         }
-        (out / "index.json").write_text(json.dumps(jsonable_encoder(index), separators=(",", ":")))
+        bench = score(con, SPLIT)  # scored on the fresh scan, before any query is answered
+        drafted = Counter(q.status for q in query_rows)
+        evaluation = {
+            "benchmark": {"split": SPLIT, "planted": bench.planted, "caught": bench.caught,
+                          "false_alarms": bench.false_alarms, "quiet_charts": bench.quiet_charts,
+                          "by_group": [{"group": g, "charts": n, "correct": ok, "flags": fl}
+                                       for g, n, ok, fl in bench.by_group]},
+            "heldout_charts": con.execute("SELECT count(*) FROM ehr.encounters WHERE split = 'heldout'").fetchone()[0],
+            "queries": {"drafted": len(query_rows), "passed_check": drafted["pending_review"],
+                        "needs_rewrite": drafted["needs_rewrite"]},
+            "rules": clinical_rules(),
+        }
+        (out / "index.json").write_text(json.dumps(jsonable_encoder(index), separators=(",", ":"), sort_keys=True))
         # The browser replay must land where the engine does: approve every query, let the
         # simulated physician answer, and record the ward totals for web/tests/demo.test.mts.
         for q in query_rows:
@@ -155,8 +199,10 @@ def export(db_path: Path, out: Path, cases_path: Path) -> dict:
                                            [SPLIT]).fetchall()),
             "leadership": reports.leadership(con), "ur_counts": reports.ur_board(con)["counts"],
         }
-        (cases_path.parent / "demo-expected.json").write_text(json.dumps(jsonable_encoder(expected), indent=2))
+        (cases_path.parent / "demo-expected.json").write_text(json.dumps(jsonable_encoder(expected), indent=2, sort_keys=True))
         cases = lint_cases(query_rows)
+        evaluation["parity_cases"] = len(cases)
+        (out / "evaluation.json").write_text(json.dumps(evaluation, indent=1))
         cases_path.parent.mkdir(parents=True, exist_ok=True)
         cases_path.write_text(json.dumps(cases, separators=(",", ":")))
         con.close()

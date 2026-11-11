@@ -1,0 +1,86 @@
+{
+ "benchmark": {
+  "split": "dev",
+  "planted": 75,
+  "caught": 75,
+  "false_alarms": 0,
+  "quiet_charts": 125,
+  "by_group": [
+   {
+    "group": "confounder",
+    "charts": 15,
+    "correct": 15,
+    "flags": 0
+   },
+   {
+    "group": "correct",
+    "charts": 40,
+    "correct": 40,
+    "flags": 0
+   },
+   {
+    "group": "missing",
+    "charts": 50,
+    "correct": 50,
+    "flags": 50
+   },
+   {
+    "group": "near_miss",
+    "charts": 30,
+    "correct": 30,
+    "flags": 0
+   },
+   {
+    "group": "routine",
+    "charts": 40,
+    "correct": 40,
+    "flags": 0
+   },
+   {
+    "group": "unsupported",
+    "charts": 25,
+    "correct": 25,
+    "flags": 25
+   }
+  ]
+ },
+ "heldout_charts": 100,
+ "queries": {
+  "drafted": 75,
+  "passed_check": 75,
+  "needs_rewrite": 0
+ },
+ "rules": [
+  {
+   "condition": "Sepsis",
+   "source": "Sepsis-3 (Singer et al., JAMA 2016)",
+   "rule": "Suspected infection (blood cultures and antibiotics) plus a SOFA rise of at least 2: MAP < 70 mmHg, platelets < 150 K/uL, bilirubin \u2265 1.2 mg/dL, creatinine rise from the patient's own low"
+  },
+  {
+   "condition": "Acute kidney injury",
+   "source": "KDIGO 2012 AKI guideline",
+   "rule": "Creatinine up \u2265 0.3 mg/dL within 48 h, or to \u2265 1.5x an earlier value within 7 days. A stable high baseline (CKD) does not count"
+  },
+  {
+   "condition": "Hyponatremia",
+   "source": "Serum sodium < 135 mmol/L (standard definition)",
+   "rule": "Sodium < 135 mmol/L that was clinically significant: treated (fluid restriction, salt tablets, tolvaptan, hypertonic saline) or checked \u2265 4 times in 48 h"
+  },
+  {
+   "condition": "Acute blood loss anemia",
+   "source": "Common CDI clinical indicators",
+   "rule": "Hemoglobin drop \u2265 2 g/dL with a documented bleeding source or a transfusion"
+  },
+  {
+   "condition": "Acute hypoxic respiratory failure",
+   "source": "Common CDI clinical indicators",
+   "rule": "At least 2 of: SpO2 < 91% on room air, PaO2 < 60 mmHg, respiratory rate > 28/min; plus oxygen therapy"
+  },
+  {
+   "condition": "Acute systolic heart failure",
+   "source": "2022 AHA/ACC/HFSA guideline; ESC BNP guidance",
+   "rule": "LVEF \u2264 40%, BNP > 400 pg/mL and an IV loop diuretic"
+  }
+ ],
+ "parity_cases": 2250
+}

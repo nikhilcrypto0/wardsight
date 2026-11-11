@@ -1,83 +1,83 @@
 {
-  "statuses": {
-    "resolved": 57,
-    "answered": 18
-  },
-  "open_flags": {
-    "missing_dx": 11,
-    "unsupported_dx": 7
-  },
   "leadership": {
-    "case_mix": {
-      "first_documented": 0.8313,
-      "current": 0.8726,
-      "if_all_resolved": 0.8763,
-      "cases": 200
-    },
-    "queries": {
-      "drafted": 75,
-      "sent": 75,
-      "answered": 75,
-      "resolved": 57,
-      "pending_review": 0,
-      "response_rate": 1.0,
-      "agreement_rate": 0.76
-    },
     "by_condition": [
       {
         "condition": "abla",
         "gaps": 12,
         "missing": 8,
-        "unsupported": 4,
         "resolved": 9,
+        "unsupported": 4,
         "weight_change": 1.0053
       },
       {
         "condition": "aki",
         "gaps": 13,
         "missing": 9,
-        "unsupported": 4,
         "resolved": 11,
+        "unsupported": 4,
         "weight_change": 0.1825
       },
       {
         "condition": "arf",
         "gaps": 12,
         "missing": 8,
-        "unsupported": 4,
         "resolved": 8,
+        "unsupported": 4,
         "weight_change": 1.5826
       },
       {
         "condition": "hf",
         "gaps": 12,
         "missing": 8,
-        "unsupported": 4,
         "resolved": 9,
+        "unsupported": 4,
         "weight_change": 2.0286
       },
       {
         "condition": "hyponatremia",
         "gaps": 12,
         "missing": 8,
-        "unsupported": 4,
         "resolved": 9,
+        "unsupported": 4,
         "weight_change": 0.1825
       },
       {
         "condition": "sepsis",
         "gaps": 14,
         "missing": 9,
-        "unsupported": 5,
         "resolved": 11,
+        "unsupported": 5,
         "weight_change": 3.2682
       }
     ],
+    "case_mix": {
+      "cases": 200,
+      "current": 0.8726,
+      "first_documented": 0.8313,
+      "if_all_resolved": 0.8763
+    },
+    "queries": {
+      "agreement_rate": 0.76,
+      "answered": 75,
+      "drafted": 75,
+      "pending_review": 0,
+      "resolved": 57,
+      "response_rate": 1.0,
+      "sent": 75
+    },
     "weights_source": "CMS IPPS FY2027 Table 5 (v44), via quickintell.com; verify before real use"
   },
+  "open_flags": {
+    "missing_dx": 11,
+    "unsupported_dx": 7
+  },
+  "statuses": {
+    "answered": 18,
+    "resolved": 57
+  },
   "ur_counts": {
-    "long_stay": 23,
     "explained_by_gap": 8,
+    "long_stay": 23,
     "ok": 169
   }
 }
