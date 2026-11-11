@@ -30,7 +30,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npm test
-      - run: npx tsc --noEmit
+      # the build generates Next's route types (LayoutProps etc.), so type-check after it
       - run: npm run build
         env:
           NEXT_PUBLIC_WARDSIGHT_MODE: public
+      - run: npx tsc --noEmit
