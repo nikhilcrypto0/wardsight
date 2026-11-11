@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import LocalOnly from "../components/LocalOnly";
 import { api, type Leadership } from "../lib/api";
 import { CONDITION } from "../lib/labels";
-import { IS_PUBLIC } from "../lib/mode";
 
 function pct(value: number | null): string {
   return value == null ? "—" : `${Math.round(value * 100)}%`;
@@ -129,5 +127,5 @@ function LeadershipScreen() {
 }
 
 export default function LeadershipPage() {
-  return IS_PUBLIC ? <LocalOnly screen="leadership view" /> : <LeadershipScreen />;
+  return <LeadershipScreen />;
 }

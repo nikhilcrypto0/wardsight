@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import LocalOnly from "../components/LocalOnly";
 import { api, type AuditRow } from "../lib/api";
-import { IS_PUBLIC } from "../lib/mode";
 
 const ACTION_LABEL: Record<string, string> = {
   approved_and_sent: "Approved and sent",
@@ -15,7 +13,7 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 export default function AuditPage() {
-  return IS_PUBLIC ? <LocalOnly screen="audit log" /> : <AuditScreen />;
+  return <AuditScreen />;
 }
 
 function AuditScreen() {

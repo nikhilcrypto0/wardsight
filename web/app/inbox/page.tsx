@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import LocalOnly from "../components/LocalOnly";
 import { api, type InboxItem } from "../lib/api";
-import { IS_PUBLIC } from "../lib/mode";
 import { CONDITION, DrgShift, StatusBadge } from "../lib/labels";
 
 function OpenQuery({ item, onChanged }: { item: InboxItem; onChanged: () => void }) {
@@ -71,7 +69,7 @@ function OpenQuery({ item, onChanged }: { item: InboxItem; onChanged: () => void
 }
 
 export default function InboxPage() {
-  return IS_PUBLIC ? <LocalOnly screen="physician inbox" /> : <InboxScreen />;
+  return <InboxScreen />;
 }
 
 function InboxScreen() {

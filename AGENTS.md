@@ -20,7 +20,9 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `uv run wardsight-bench --split heldout --final` — ONCE, at the very end; a rerun is refused
 - `uv run wardsight-queries --split dev [--llm --limit 3]` — draft physician queries into `ops.queries`
 - `uv run wardsight-api` — HTTP API on :8000 (dev split only)
-- `uv run wardsight-replay` — rebuild `web/public/replay.json` (the hosted demo's only data)
+- `uv run wardsight-replay` — rebuild `web/public/replay.json` (the replay screen's data)
+- `uv run wardsight-demo` — rebuild `web/public/demo/` (the hosted demo's data) + `web/tests/` fixtures;
+  then `cd web && npm test` (browser rules check and workflow must match the Python engine)
 - `scripts/media/` — demo videos, video kit and thumbnail from real output; see `scripts/media/README.md`
 - `uv run wardsight-fhir --bundle <file> | --server <url> --patient <id>` — evidence rules on FHIR R4 data
 - `NEXT_PUBLIC_WARDSIGHT_MODE=public npm run build` (in `web/`) — the hosted demo build; see `docs/DEPLOY.md`
@@ -54,4 +56,6 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `api/app.py` — FastAPI; `api/reports.py` — UR board + leadership metrics
 - `engine/ur.py` — two-midnight + GMLOS review, case mix; `engine/drg_table.py` — v44 weights/GMLOS (sourced)
 - `replay.py` — ward replay timeline; `web/` — Next.js screens (replay, worklist, chart, inbox, UR,
-  leadership, audit); public mode shows only the replay
+  leadership, audit); public mode runs all of them in the browser via `web/app/lib/demo.ts`
+- `demo_export.py` — records every workflow outcome for the hosted demo; `web/app/lib/lint.ts` is the
+  browser copy of `queries/lint.py` (keep them in step: `npm test` fails if they drift)

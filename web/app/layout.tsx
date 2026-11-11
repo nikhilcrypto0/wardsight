@@ -13,16 +13,14 @@ export const metadata: Metadata = {
   description: "Clinical documentation integrity on a synthetic ward. Demo, not for clinical use.",
 };
 
-const NAV = IS_PUBLIC
-  ? [{ href: "/", label: "Ward replay" }]
-  : [
-      { href: "/replay", label: "Ward replay" },
-      { href: "/", label: "CDI worklist" },
-      { href: "/inbox", label: "Physician inbox" },
-      { href: "/ur", label: "Utilization review" },
-      { href: "/leadership", label: "Leadership" },
-      { href: "/audit", label: "Audit log" },
-    ];
+const NAV = [
+  { href: "/", label: "CDI worklist" },
+  { href: "/inbox", label: "Physician inbox" },
+  { href: "/ur", label: "Utilization review" },
+  { href: "/leadership", label: "Leadership" },
+  { href: "/replay", label: "Ward replay" },
+  { href: "/audit", label: "Audit log" },
+];
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -52,8 +50,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <main className="mx-auto w-full max-w-7xl px-6 py-8 flex-1">{children}</main>
         {IS_PUBLIC && (
           <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
-            Public demo: a replay of precomputed results. The full app (worklist, live rules check, physician
-            inbox, audit log) runs locally. Source:{" "}
+            Public demo: the full workflow runs in your browser on precomputed engine results, so no AI call is
+            made and nothing you do reaches a server. Source:{" "}
             <a href="https://github.com/nikhilcrypto0/wardsight" className="text-teal-700 underline">
               github.com/nikhilcrypto0/wardsight
             </a>

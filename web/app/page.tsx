@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import ReplayView from "./components/ReplayView";
 import { api, type Status, type Summary, type WorklistRow } from "./lib/api";
 import { IS_PUBLIC } from "./lib/mode";
 import { CONDITION, DrgShift, KindBadge, StatusBadge } from "./lib/labels";
@@ -25,7 +24,7 @@ function Stat({ value, label, tone = "text-slate-900" }: { value: number; label:
 }
 
 export default function HomePage() {
-  return IS_PUBLIC ? <ReplayView linkCharts={false} /> : <WorklistPage />;
+  return <WorklistPage />;
 }
 
 function WorklistPage() {
@@ -48,7 +47,12 @@ function WorklistPage() {
     [rows, filter],
   );
 
-  if (error) return <p className="text-rose-700">{error}. Is the API running (uv run wardsight-api)?</p>;
+  if (error)
+    return (
+      <p className="text-rose-700">
+        {error}.{IS_PUBLIC ? " Try reloading the page." : " Is the API running (uv run wardsight-api)?"}
+      </p>
+    );
   if (!rows || !summary) return <p className="text-slate-500">Loading worklist…</p>;
 
   const q = summary.queries;
@@ -56,6 +60,7 @@ function WorklistPage() {
 
   return (
     <div className="space-y-8">
+      {IS_PUBLIC && <DemoIntro />}
       <section>
         <h1 className="text-2xl font-semibold tracking-tight">Clinical documentation worklist</h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -130,5 +135,43 @@ function WorklistPage() {
         {shown.length === 0 && <p className="p-6 text-sm text-slate-500">Nothing in this view.</p>}
       </section>
     </div>
+  );
+}
+
+/** First thing a visitor to the hosted demo sees: what this is and where to click. */
+function DemoIntro() {
+  return (
+    <section className="rounded-xl bg-slate-900 p-6 text-white">
+      <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">Try it: you are the CDI reviewer</p>
+      <h2 className="mt-2 text-xl font-semibold tracking-tight">
+        200 synthetic inpatients. The engine found 75 places where the chart and the notes disagree.
+      </h2>
+      <ol className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-3">
+        <li>
+          <span className="font-semibold text-white">1. Open a patient.</span> See the evidence the rule used, with
+          the hour each value appeared, next to the notes that never name the diagnosis.
+        </li>
+        <li>
+          <span className="font-semibold text-white">2. Review the draft query.</span> Edit it and the compliance check
+          (ACDIS/AHIMA 2022) re-runs on every keystroke. Nothing is sent until you approve.
+        </li>
+        <li>
+          <span className="font-semibold text-white">3. Let the physician answer.</span> The answer becomes an
+          addendum, the chart is rescanned and the billing category updates. Every step is in the audit log.
+        </li>
+      </ol>
+      <div className="mt-5 flex flex-wrap gap-3 text-sm">
+        <Link href="/encounters/D0011" className="rounded-lg bg-teal-500 px-4 py-2 font-medium text-slate-900">
+          Start with patient D0011 (sepsis missed on a UTI admission)
+        </Link>
+        <Link href="/replay" className="rounded-lg px-4 py-2 ring-1 ring-slate-600 hover:bg-slate-800">
+          Watch 14 days of the ward in 15 seconds
+        </Link>
+      </div>
+      <p className="mt-4 text-xs text-slate-400">
+        Runs entirely in your browser from precomputed engine results: your clicks change only your copy. Reset it any
+        time from the audit log.
+      </p>
+    </section>
   );
 }

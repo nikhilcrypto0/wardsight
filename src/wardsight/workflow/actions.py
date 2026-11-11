@@ -105,7 +105,7 @@ def reject(con: duckdb.DuckDBPyConnection, query_id: str, reviewer: str, reason:
     audit(con, reviewer, "rejected", query_id, reason)
 
 
-def _addendum_text(q: QueryRow, option: str, comment: str) -> str | None:
+def addendum_text(q: QueryRow, option: str, comment: str) -> str | None:
     if option in (OTHER, UNDETERMINED):
         return None
     if q.kind == "missing_dx" and option == q.options[0]:
@@ -128,7 +128,7 @@ def answer(con: duckdb.DuckDBPyConnection, query_id: str, option_index: int, com
     chart = load_charts(con, encounter_id=q.encounter_id)[0]
     drg_before = group(chart, coded_diagnoses(chart)).drg
 
-    text = _addendum_text(q, option, comment)
+    text = addendum_text(q, option, comment)
     if text:
         admit, los = con.execute("SELECT admit_ts, los_days FROM ehr.encounters WHERE encounter_id = ?",
                                  [q.encounter_id]).fetchone()

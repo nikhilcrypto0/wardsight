@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import LocalOnly from "../components/LocalOnly";
 import { api, type UrBoard, type UrStatus } from "../lib/api";
-import { IS_PUBLIC } from "../lib/mode";
 
 const STATUS: Record<UrStatus, [string, string]> = {
   long_stay: ["Long stay: review barriers", "bg-rose-50 text-rose-700 ring-rose-200"],
@@ -140,5 +138,5 @@ function UrScreen() {
 }
 
 export default function UrPage() {
-  return IS_PUBLIC ? <LocalOnly screen="utilization review board" /> : <UrScreen />;
+  return <UrScreen />;
 }

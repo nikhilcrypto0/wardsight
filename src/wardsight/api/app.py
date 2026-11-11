@@ -49,6 +49,52 @@ class LintBody(BaseModel):
     stem: str = Field(max_length=2000)
 
 
+def rows(con: duckdb.DuckDBPyConnection, sql: str, params: list | None = None) -> list[dict]:
+    cur = con.execute(sql, params or [])
+    names = [d[0] for d in cur.description]
+    return [dict(zip(names, r)) for r in cur.fetchall()]
+
+
+def worklist_rows(con: duckdb.DuckDBPyConnection) -> list[dict]:
+    return rows(con, """
+        SELECT q.query_id, q.encounter_id, q.condition, q.kind, q.status, q.updated_ts,
+               e.reason_for_admission, p.age, p.sex,
+               f.drg_now, f.severity_now, f.drg_if_resolved, f.severity_if_resolved,
+               q.drg_before, q.drg_after, q.answer
+        FROM ops.queries q
+        JOIN ehr.encounters e USING (encounter_id) JOIN ehr.patients p USING (patient_id)
+        LEFT JOIN ops.flags f ON f.encounter_id = q.encounter_id AND f.condition = q.condition
+                              AND f.kind = q.kind
+        WHERE q.split = ? ORDER BY q.encounter_id, q.condition""", [SPLIT])
+
+
+def encounter_payload(con: duckdb.DuckDBPyConnection, encounter_id: str) -> dict | None:
+    """The chart as the web app shows it; None if it is not a dev-split encounter."""
+    charts = load_charts(con, encounter_id=encounter_id)
+    if not charts or charts[0].split != SPLIT:
+        return None
+    chart = charts[0]
+    drg = group(chart, coded_diagnoses(chart))
+    flags = rows(con, "SELECT condition, kind, icd10, detail, evidence, drg_now, drg_now_desc, "
+                      "severity_now, drg_if_resolved, drg_if_resolved_desc, severity_if_resolved "
+                      "FROM ops.flags WHERE encounter_id = ?", [encounter_id])
+    queries = rows(con, "SELECT * FROM ops.queries WHERE encounter_id = ?", [encounter_id])
+    return {
+        "encounter_id": chart.encounter_id, "age": chart.age, "sex": chart.sex, "los_days": chart.los_days,
+        "reason_for_admission": chart.reason_for_admission, "problem_list": chart.problem_list,
+        "drg": {"drg": drg.drg, "description": drg.description, "severity": drg.severity,
+                "principal": drg.principal, "secondary": drg.secondary},
+        "series": {k: chart.series(k) for k in CHART_SERIES if chart.series(k)},
+        "labs": {k: chart.series(k) for k in ONE_OFF_LABS if chart.series(k)},
+        "timeline": [{"t": t, "kind": e.kind, "text": e.text} for e in chart.events
+                     if (t := e.t_hours) is not None and e.text],
+        "notes": [{"type": n.note_type, "day": n.hospital_day, "text": n.text} for n in chart.notes],
+        "flags": flags,
+        "queries": [{**q, "options": json.loads(q["options"]), "indicators": json.loads(q["indicators"]),
+                     "problems": json.loads(q["problems"] or "[]")} for q in queries],
+    }
+
+
 def create_app(db_path: Path) -> FastAPI:
     app = FastAPI(title="WardSight API", description="Synthetic data only. Demo, not for clinical use.")
 
@@ -60,11 +106,6 @@ def create_app(db_path: Path) -> FastAPI:
             yield con
         finally:
             con.close()
-
-    def rows(con: duckdb.DuckDBPyConnection, sql: str, params: list | None = None) -> list[dict]:
-        cur = con.execute(sql, params or [])
-        names = [d[0] for d in cur.description]
-        return [dict(zip(names, r)) for r in cur.fetchall()]
 
     def run_action(fn, *args) -> object:
         try:
@@ -88,43 +129,15 @@ def create_app(db_path: Path) -> FastAPI:
     @app.get("/api/worklist")
     def worklist() -> list[dict]:
         with db() as con:
-            return rows(con, """
-                SELECT q.query_id, q.encounter_id, q.condition, q.kind, q.status, q.updated_ts,
-                       e.reason_for_admission, p.age, p.sex,
-                       f.drg_now, f.severity_now, f.drg_if_resolved, f.severity_if_resolved,
-                       q.drg_before, q.drg_after, q.answer
-                FROM ops.queries q
-                JOIN ehr.encounters e USING (encounter_id) JOIN ehr.patients p USING (patient_id)
-                LEFT JOIN ops.flags f ON f.encounter_id = q.encounter_id AND f.condition = q.condition
-                                      AND f.kind = q.kind
-                WHERE q.split = ? ORDER BY q.encounter_id, q.condition""", [SPLIT])
+            return worklist_rows(con)
 
     @app.get("/api/encounters/{encounter_id}")
     def encounter(encounter_id: str) -> dict:
         with db() as con:
-            charts = load_charts(con, encounter_id=encounter_id)
-            if not charts or charts[0].split != SPLIT:
-                raise HTTPException(404, "encounter not found")
-            chart = charts[0]
-            drg = group(chart, coded_diagnoses(chart))
-            flags = rows(con, "SELECT condition, kind, icd10, detail, evidence, drg_now, drg_now_desc, "
-                              "severity_now, drg_if_resolved, drg_if_resolved_desc, severity_if_resolved "
-                              "FROM ops.flags WHERE encounter_id = ?", [encounter_id])
-            queries = rows(con, "SELECT * FROM ops.queries WHERE encounter_id = ?", [encounter_id])
-        return {
-            "encounter_id": chart.encounter_id, "age": chart.age, "sex": chart.sex, "los_days": chart.los_days,
-            "reason_for_admission": chart.reason_for_admission, "problem_list": chart.problem_list,
-            "drg": {"drg": drg.drg, "description": drg.description, "severity": drg.severity,
-                    "principal": drg.principal, "secondary": drg.secondary},
-            "series": {k: chart.series(k) for k in CHART_SERIES if chart.series(k)},
-            "labs": {k: chart.series(k) for k in ONE_OFF_LABS if chart.series(k)},
-            "timeline": [{"t": t, "kind": e.kind, "text": e.text} for e in chart.events
-                         if (t := e.t_hours) is not None and e.text],
-            "notes": [{"type": n.note_type, "day": n.hospital_day, "text": n.text} for n in chart.notes],
-            "flags": flags,
-            "queries": [{**q, "options": json.loads(q["options"]), "indicators": json.loads(q["indicators"]),
-                         "problems": json.loads(q["problems"] or "[]")} for q in queries],
-        }
+            payload = encounter_payload(con, encounter_id)
+        if payload is None:
+            raise HTTPException(404, "encounter not found")
+        return payload
 
     @app.post("/api/lint")
     def lint(body: LintBody) -> dict:

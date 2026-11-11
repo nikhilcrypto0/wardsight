@@ -1,4 +1,8 @@
 // Typed client for the WardSight Python API (proxied at /api by next.config.ts).
+// The hosted demo has no API: there the same calls run in the browser (lib/demo.ts).
+
+import { demoApi } from "./demo";
+import { IS_PUBLIC } from "./mode";
 
 export type Kind = "missing_dx" | "unsupported_dx";
 export type Status = "pending_review" | "needs_rewrite" | "rejected" | "sent" | "answered" | "resolved";
@@ -148,7 +152,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 const post = <T>(path: string, body: unknown = {}) =>
   call<T>(path, { method: "POST", body: JSON.stringify(body) });
 
-export const api = {
+const liveApi = {
   summary: () => call<Summary>("/api/summary"),
   worklist: () => call<WorklistRow[]>("/api/worklist"),
   encounter: (id: string) => call<Encounter>(`/api/encounters/${encodeURIComponent(id)}`),
@@ -165,3 +169,7 @@ export const api = {
   leadership: () => call<Leadership>("/api/leadership"),
   reset: () => post("/api/admin/reset"),
 };
+
+export type Api = typeof liveApi;
+
+export const api: Api = IS_PUBLIC ? demoApi : liveApi;
