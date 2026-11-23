@@ -8,6 +8,7 @@ from pathlib import Path
 
 import duckdb
 import pytest
+from counts import DEV_CHARTS, DEV_FLAGS
 from fastapi.testclient import TestClient
 
 from wardsight.api.app import create_app
@@ -45,13 +46,13 @@ def first(client: TestClient, condition: str, kind: str) -> dict:
 
 def test_worklist_and_summary(client):
     rows = client.get("/api/worklist").json()
-    assert len(rows) == 75 and {r["status"] for r in rows} == {"pending_review"}
-    assert client.get("/api/summary").json()["queries"] == {"pending_review": 75}
+    assert len(rows) == DEV_FLAGS and {r["status"] for r in rows} == {"pending_review"}
+    assert client.get("/api/summary").json()["queries"] == {"pending_review": DEV_FLAGS}
     for r in rows:  # every open gap carries a priority that is exactly the sum of its shown parts
         assert 0 <= r["priority"] <= 100
         assert r["priority"] == sum(p["points"] for p in r["priority_parts"])
     kinds = {r["kind"] for r in rows if r["priority"] >= 50}
-    assert kinds == {"missing_dx", "unsupported_dx"}  # unsupported diagnoses rank high too
+    assert {"missing_dx", "unsupported_dx"} <= kinds  # unsupported diagnoses rank high too
 
 
 def test_heldout_charts_are_never_served(client):
@@ -105,7 +106,7 @@ def test_edited_query_must_pass_the_rules_check(client):
 def test_ur_and_leadership_reflect_resolved_queries(client):
     before = client.get("/api/leadership").json()
     ur = client.get("/api/ur").json()
-    assert sum(ur["counts"].values()) == 200
+    assert sum(ur["counts"].values()) == DEV_CHARTS
     q = first(client, "sepsis", "missing_dx")
     client.post(f"/api/queries/{q['query_id']}/approve", json={})
     client.post(f"/api/queries/{q['query_id']}/answer", json={"option_index": 0})
@@ -141,5 +142,5 @@ def test_reject_simulate_audit_and_reset(client):
     assert {"rejected", "approved_and_sent", "answered"} <= set(actions_logged)
 
     client.post("/api/admin/reset")
-    assert client.get("/api/summary").json()["queries"] == {"pending_review": 75}
+    assert client.get("/api/summary").json()["queries"] == {"pending_review": DEV_FLAGS}
     assert client.get("/api/audit").json()[0]["action"] == "reset"  # the log itself is never wiped

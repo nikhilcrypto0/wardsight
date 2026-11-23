@@ -9,7 +9,7 @@ import duckdb
 from test_notes import config, fake_model
 
 from wardsight.factory import run
-from wardsight.llm_eval import run_eval
+from wardsight.llm_eval import refresh_work, run_eval
 from wardsight.notes.template import write_template_notes
 from wardsight.reload import load_encounters
 
@@ -45,3 +45,24 @@ def test_eval_scores_dev_only_on_a_copy(tmp_path: Path):
     assert again["llm_charts"] == 6 + again["written"]
     assert splits == {"dev"}                      # held-out charts never get AI notes
     assert heldout_scored == 0                    # and the final exam is never run
+
+
+def test_refresh_keeps_paid_notes_only_for_unchanged_charts(tmp_path: Path):
+    run(tmp_path, seed=5, synthea_dir=None)
+    db, work = tmp_path / "wardsight.duckdb", tmp_path / "llm.duckdb"
+    with duckdb.connect(str(db)) as con:
+        write_template_notes(con, load_encounters(con), seed=0)
+    generate, _ = fake_model(leak_first=False)
+    run_eval(db, work, config(tmp_path, 10_000_000), generate, "fake", 3, tmp_path / "r.md")
+    with duckdb.connect(str(work), read_only=True) as con:
+        paid = [e for (e,) in con.execute("SELECT DISTINCT encounter_id FROM ehr.notes WHERE source = 'llm' "
+                                          "ORDER BY 1").fetchall()]
+    with duckdb.connect(str(db)) as con:  # the ward is rebuilt and one paid-for chart changes
+        con.execute("UPDATE ehr.events SET value = value + 1 WHERE encounter_id = ? AND value IS NOT NULL",
+                    [paid[0]])
+    assert refresh_work(db, work) == len(paid) - 1
+    with duckdb.connect(str(work), read_only=True) as con:
+        kept = {e for (e,) in con.execute("SELECT DISTINCT encounter_id FROM ehr.notes WHERE source = 'llm'").fetchall()}
+        ledger = con.execute("SELECT count(*) FROM ops.llm_ledger").fetchone()[0]
+    assert kept == set(paid[1:])       # the changed chart's notes were not reused
+    assert ledger >= len(paid)         # the bill so far is kept

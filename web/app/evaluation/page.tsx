@@ -16,6 +16,10 @@ const GROUPS: Record<string, { label: string; expect: string }> = {
   near_miss: { label: "Near-miss", expect: "Just below the published threshold: must stay quiet" },
   confounder: { label: "Confounder", expect: "Chronic kidney disease, high but stable creatinine: must stay quiet" },
   routine: { label: "Routine admission", expect: "Nothing to find: must stay quiet" },
+  unspecified: { label: "Not fully specified", expect: "Vague term ('CHF', 'anemia') where the evidence is specific: must flag it" },
+  unspecified_near: { label: "Vague, not specific", expect: "Vague term and the evidence does not support more: must stay quiet" },
+  conflicting: { label: "Conflicting notes", expect: "One note states it, a later note rules it out: must flag it" },
+  conflict_near: { label: "Stated, then resolved", expect: "A change over time, not a conflict: must stay quiet" },
 };
 
 const { benchmark: b, queries: q, rules, heldout_charts, parity_cases } = evaluation;
@@ -141,9 +145,11 @@ export default function EvaluationPage() {
         <h2 className="text-sm font-semibold text-amber-900">Not proven yet</h2>
         <ul className="mt-3 grid gap-3 text-sm text-amber-900/90 md:grid-cols-2">
           <li>
-            <span className="font-medium">Messy notes.</span> These scores use notes written from templates, with clean
-            wording. Real notes hedge, abbreviate and copy forward. The next test uses LLM-written notes with that
-            variety, scored on the same answer key.
+            <span className="font-medium">Free-form wording.</span> The scores above use template notes. On the
+            original 200 development charts rewritten by an AI model (gpt-5.4-mini, 2026-11-23) the engine scored the
+            same, 75 of 75 with no false alarms. But those AI notes still had to use set wording for each diagnosis, so
+            shorthand and hedging (&ldquo;AKI on CKD&rdquo;, &ldquo;?sepsis&rdquo;, &ldquo;concern for&rdquo;) are
+            not tested yet.
           </li>
           <li>
             <span className="font-medium">The held-out ward.</span> Not scored yet; it is run once, after the rules

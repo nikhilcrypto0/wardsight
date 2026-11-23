@@ -12,6 +12,15 @@ export const CONDITION: Record<string, string> = {
 export const KIND: Record<Kind, string> = {
   missing_dx: "Missing diagnosis",
   unsupported_dx: "Not supported by evidence",
+  unspecified_dx: "Not fully specified",
+  conflicting_dx: "Conflicting notes",
+};
+
+const KIND_STYLE: Record<Kind, string> = {
+  missing_dx: "text-sky-700 bg-sky-50",
+  unsupported_dx: "text-rose-700 bg-rose-50",
+  unspecified_dx: "text-amber-800 bg-amber-50",
+  conflicting_dx: "text-violet-700 bg-violet-50",
 };
 
 const STATUS_STYLE: Record<Status, [string, string]> = {
@@ -33,8 +42,7 @@ export function StatusBadge({ status }: { status: Status }) {
 }
 
 export function KindBadge({ kind }: { kind: Kind }) {
-  const style = kind === "missing_dx" ? "text-sky-700 bg-sky-50" : "text-rose-700 bg-rose-50";
-  return <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${style}`}>{KIND[kind]}</span>;
+  return <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${KIND_STYLE[kind]}`}>{KIND[kind]}</span>;
 }
 
 export const SERIES_LABEL: Record<string, [string, string]> = {

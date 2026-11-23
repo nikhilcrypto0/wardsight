@@ -6,6 +6,7 @@ import json
 
 import duckdb
 import pytest
+from counts import ALL_CHARTS
 from fhir.resources.R4B.bundle import Bundle
 
 from wardsight.factory import run
@@ -23,8 +24,8 @@ def test_database_tables(out):
         def count(sql: str) -> int:
             return con.execute(sql).fetchone()[0]
 
-        assert count("SELECT count(*) FROM ehr.encounters") == 300
-        assert count("SELECT count(*) FROM truth.answer_key") == 300
+        assert count("SELECT count(*) FROM ehr.encounters") == ALL_CHARTS
+        assert count("SELECT count(*) FROM truth.answer_key") == ALL_CHARTS
         assert count("SELECT count(*) FROM ehr.events WHERE kind = 'lab'") > 3000
         assert count("SELECT count(*) FROM ehr.events WHERE loinc IS NULL AND kind = 'vital'") == 0
         overlap = """SELECT count(*) FROM ehr.encounters d JOIN ehr.encounters h
@@ -41,7 +42,7 @@ def test_engine_schema_hides_truth(out):
 
 def test_fhir_bundles_validate(out):
     bundles = sorted((out / "fhir").rglob("*.json"))
-    assert len(bundles) == 300
+    assert len(bundles) == ALL_CHARTS
     for path in bundles[::25]:
         bundle = Bundle.model_validate(json.loads(path.read_text()))
         kinds = {e.resource.__resource_type__ for e in bundle.entry}

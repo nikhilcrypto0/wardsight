@@ -3,74 +3,86 @@
     "by_condition": [
       {
         "condition": "abla",
-        "gaps": 12,
+        "conflicting": 2,
+        "gaps": 19,
         "missing": 8,
-        "resolved": 9,
+        "resolved": 15,
+        "unspecified": 5,
         "unsupported": 4,
-        "weight_change": 1.0053
+        "weight_change": 2.0106
       },
       {
         "condition": "aki",
-        "gaps": 13,
+        "conflicting": 2,
+        "gaps": 15,
         "missing": 9,
-        "resolved": 11,
+        "resolved": 13,
+        "unspecified": 0,
         "unsupported": 4,
         "weight_change": 0.1825
       },
       {
         "condition": "arf",
-        "gaps": 12,
+        "conflicting": 2,
+        "gaps": 14,
         "missing": 8,
-        "resolved": 8,
+        "resolved": 10,
+        "unspecified": 0,
         "unsupported": 4,
-        "weight_change": 1.5826
+        "weight_change": 0.6906
       },
       {
         "condition": "hf",
-        "gaps": 12,
-        "missing": 8,
-        "resolved": 9,
+        "conflicting": 0,
+        "gaps": 17,
+        "missing": 0,
+        "resolved": 14,
+        "unspecified": 13,
         "unsupported": 4,
-        "weight_change": 2.0286
+        "weight_change": 5.4096
       },
       {
         "condition": "hyponatremia",
-        "gaps": 12,
+        "conflicting": 2,
+        "gaps": 14,
         "missing": 8,
-        "resolved": 9,
+        "resolved": 11,
+        "unspecified": 0,
         "unsupported": 4,
-        "weight_change": 0.1825
+        "weight_change": 0.0
       },
       {
         "condition": "sepsis",
-        "gaps": 14,
+        "conflicting": 2,
+        "gaps": 16,
         "missing": 9,
-        "resolved": 11,
+        "resolved": 13,
+        "unspecified": 0,
         "unsupported": 5,
-        "weight_change": 3.2682
+        "weight_change": 0.6168
       }
     ],
     "case_mix": {
-      "cases": 200,
-      "current": 0.8726,
-      "first_documented": 0.8313,
-      "if_all_resolved": 0.8763
+      "cases": 234,
+      "current": 0.8777,
+      "first_documented": 0.8396,
+      "if_all_resolved": 0.8996
     },
     "queries": {
-      "agreement_rate": 0.76,
-      "answered": 75,
-      "drafted": 75,
+      "agreement_rate": 0.8,
+      "answered": 95,
+      "drafted": 95,
       "pending_review": 0,
-      "resolved": 57,
+      "resolved": 76,
       "response_rate": 1.0,
-      "sent": 75
+      "sent": 95
     },
     "responses": {
       "by_physician": [
         {
-          "agreed": 57,
-          "agreement_rate": 0.76,
-          "answered": 75,
+          "agreed": 76,
+          "agreement_rate": 0.8,
+          "answered": 95,
           "physician": "Dr. Simulated (physician agent)"
         }
       ],
@@ -81,16 +93,17 @@
     "weights_source": "CMS IPPS FY2027 Table 5 (v44), via quickintell.com; verify before real use"
   },
   "open_flags": {
-    "missing_dx": 11,
+    "missing_dx": 17,
+    "unspecified_dx": 3,
     "unsupported_dx": 7
   },
   "statuses": {
-    "answered": 18,
-    "resolved": 57
+    "answered": 19,
+    "resolved": 76
   },
   "ur_counts": {
-    "explained_by_gap": 8,
-    "long_stay": 23,
-    "ok": 169
+    "explained_by_gap": 12,
+    "long_stay": 32,
+    "ok": 190
   }
 }

@@ -13,7 +13,9 @@ const LEADING =
 
 const NUMBER = /\d+(?:\.\d+)?/g;
 const MAX_STEM_CHARS = 700;
-const MIN_INDICATORS: Record<string, number> = { missing_dx: 2, unsupported_dx: 1 };
+const MIN_INDICATORS: Record<string, number> = { missing_dx: 2, unsupported_dx: 1, unspecified_dx: 2, conflicting_dx: 1 };
+// Kinds where the queried diagnosis is not yet documented, so the stem must not name it
+const NEW_DIAGNOSIS_KINDS = ["missing_dx", "unspecified_dx"];
 
 export interface LintInput {
   stem: string;
@@ -41,7 +43,7 @@ export function lintQuery({ stem, options, indicators, condition, kind, targets 
   if (financial) problems.push(`mentions financial impact: '${financial[0]}'`);
   const leading = LEADING.exec(stem);
   if (leading) problems.push(`leading wording: '${leading[0]}'`);
-  if (kind === "missing_dx") {
+  if (NEW_DIAGNOSIS_KINDS.includes(kind)) {
     for (const phrase of targets[condition] ?? []) {
       if (new RegExp(`(?<![a-z])${escapeRegex(phrase)}(?![a-z])`).test(text)) {
         problems.push(`names the diagnosis in the question: '${phrase}' (belongs only in the options)`);
@@ -62,7 +64,7 @@ export function lintQuery({ stem, options, indicators, condition, kind, targets 
   if (!options.includes(OTHER) || !options.includes(UNDETERMINED)) {
     problems.push("options must include 'Other (please specify)' and 'Unable to determine'");
   }
-  if (kind === "missing_dx" && (lowered.has("yes") || lowered.has("no"))) {
+  if (NEW_DIAGNOSIS_KINDS.includes(kind) && (lowered.has("yes") || lowered.has("no"))) {
     problems.push("yes/no options may not be used to introduce a new diagnosis");
   }
   if (options.length - 2 < 2) {

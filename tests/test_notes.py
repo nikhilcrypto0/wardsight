@@ -6,6 +6,7 @@ from pathlib import Path
 
 import duckdb
 import pytest
+from counts import ALL_CHARTS
 
 from wardsight.factory import run
 from wardsight.models import Mention
@@ -107,6 +108,6 @@ def test_reload_round_trip(db: Path):
     with duckdb.connect(str(db), read_only=True) as con:
         encounters = load_encounters(con)
         events = con.execute("SELECT count(*) FROM ehr.events").fetchone()[0]
-    assert len(encounters) == 300
+    assert len(encounters) == ALL_CHARTS
     assert sum(len(e.events) for e in encounters) == events
     assert all(e.mentions for e in encounters)

@@ -81,11 +81,12 @@ def leadership(con: duckdb.DuckDBPyConnection) -> dict:
                           "WHERE split = ?", [SPLIT]).fetchall()
     statuses = Counter(q[2] for q in queries)
     by_condition: dict[str, dict] = defaultdict(lambda: {"gaps": 0, "missing": 0, "unsupported": 0,
+                                                         "unspecified": 0, "conflicting": 0,
                                                          "resolved": 0, "weight_change": 0.0})
     for condition, kind, status, before, after in queries:
         row = by_condition[condition]
         row["gaps"] += 1
-        row["missing" if kind == "missing_dx" else "unsupported"] += 1
+        row[kind.removesuffix("_dx")] += 1
         if status == "resolved":
             row["resolved"] += 1
             if (b := facts(before or 0)) and (a := facts(after or 0)):

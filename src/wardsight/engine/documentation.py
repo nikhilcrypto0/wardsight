@@ -25,6 +25,7 @@ LEXICON: dict[str, tuple[str, ...]] = {
     "I50.21": ("acute on chronic systolic heart failure", "acute systolic heart failure",
                "acute systolic chf", "acute hfref", "acute heart failure with reduced ejection fraction"),
     "I50.9": ("congestive heart failure", "heart failure", "chf"),
+    "D64.9": ("anemia", "anaemia"),  # after D62, so "acute blood loss anemia" is matched whole first
 }
 
 PRE_NEGATION = ("no evidence of", "negative for", "ruled out", "rule out", "without", "denies",
@@ -42,6 +43,7 @@ class Mention:
     negated: bool
     clause: str
     addendum: bool = False
+    note_type: str = ""
 
 
 def _phrase_re(phrase: str) -> re.Pattern[str]:
@@ -72,7 +74,7 @@ def find_mentions(notes: tuple[NoteText, ...]) -> list[Mention]:
                         continue  # part of a longer phrase already matched
                     taken.append((m.start(), m.end()))
                     mentions.append(Mention(code, phrase, _is_negated(clause, m.start(), m.end()),
-                                            clause.strip(), note.note_type == ADDENDUM))
+                                            clause.strip(), note.note_type == ADDENDUM, note.note_type))
     return mentions
 
 

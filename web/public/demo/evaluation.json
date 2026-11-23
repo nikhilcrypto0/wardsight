@@ -1,11 +1,23 @@
 {
  "benchmark": {
   "split": "dev",
-  "planted": 75,
-  "caught": 75,
+  "planted": 95,
+  "caught": 95,
   "false_alarms": 0,
-  "quiet_charts": 125,
+  "quiet_charts": 139,
   "by_group": [
+   {
+    "group": "conflict_near",
+    "charts": 8,
+    "correct": 8,
+    "flags": 0
+   },
+   {
+    "group": "conflicting",
+    "charts": 10,
+    "correct": 10,
+    "flags": 10
+   },
    {
     "group": "confounder",
     "charts": 15,
@@ -37,6 +49,18 @@
     "flags": 0
    },
    {
+    "group": "unspecified",
+    "charts": 10,
+    "correct": 10,
+    "flags": 10
+   },
+   {
+    "group": "unspecified_near",
+    "charts": 6,
+    "correct": 6,
+    "flags": 0
+   },
+   {
     "group": "unsupported",
     "charts": 25,
     "correct": 25,
@@ -46,8 +70,8 @@
  },
  "heldout_charts": 100,
  "queries": {
-  "drafted": 75,
-  "passed_check": 75,
+  "drafted": 95,
+  "passed_check": 95,
   "needs_rewrite": 0
  },
  "rules": [
@@ -77,10 +101,20 @@
    "rule": "At least 2 of: SpO2 < 91% on room air, PaO2 < 60 mmHg, respiratory rate > 28/min; plus oxygen therapy"
   },
   {
+   "condition": "Not fully specified (alert)",
+   "source": "ACDIS/AHIMA compliant query practice (2022): imprecise documentation",
+   "rule": "The evidence meets a specific diagnosis but the notes use only a vague term: 'CHF' for acute systolic heart failure, 'anemia' for acute blood loss anemia"
+  },
+  {
+   "condition": "Conflicting documentation (alert)",
+   "source": "ACDIS/AHIMA compliant query practice (2022): conflicting documentation",
+   "rule": "One note states a diagnosis and another note rules it out, with no physician addendum settling it. A diagnosis stated and later marked 'resolved' is a change, not a conflict"
+  },
+  {
    "condition": "Acute systolic heart failure",
    "source": "2022 AHA/ACC/HFSA guideline; ESC BNP guidance",
    "rule": "LVEF \u2264 40%, BNP > 400 pg/mL and an IV loop diuretic"
   }
  ],
- "parity_cases": 2250
+ "parity_cases": 2850
 }

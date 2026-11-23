@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from wardsight.engine.chart import Chart
 from wardsight.engine.drg import coded_diagnoses, group
 from wardsight.engine.drg_table import facts
-from wardsight.engine.gaps import Flag
+from wardsight.engine.gaps import VAGUE_CODE, Flag
 
 MIDNIGHT_BENCHMARK = 2
 LONG_STAY_RATIO = 1.5       # actual LOS at least 1.5x the GMLOS ...
@@ -51,7 +51,11 @@ def codes_if_resolved(chart: Chart, flags: list[Flag]) -> set[str]:
     codes = coded_diagnoses(chart)
     for f in flags:
         if f.kind == "missing_dx":
-            codes = (codes - {"I50.9"}) | {f.icd10} if f.condition == "hf" else codes | {f.icd10}
+            codes = codes | {f.icd10}
+        elif f.kind == "unspecified_dx":
+            codes = (codes - {VAGUE_CODE[f.condition][0]}) | {f.icd10}
+        elif f.kind == "conflicting_dx":
+            codes = {f.drg_if_resolved.principal, *f.drg_if_resolved.secondary}
         else:
             codes = codes - {f.icd10}
     return codes
@@ -65,7 +69,7 @@ def review(chart: Chart, admit: datetime, flags: list[Flag]) -> UrRow:
     now = group(chart, coded_diagnoses(chart))
     known = facts(now.drg)
     midnights = midnights_crossed(admit, admit + timedelta(days=chart.los_days))
-    missing = [f for f in flags if f.kind == "missing_dx"]
+    missing = [f for f in flags if f.kind in ("missing_dx", "unspecified_dx")]  # gaps that raise the DRG
     if_doc = group(chart, codes_if_resolved(chart, missing)) if missing else None
     doc_facts = facts(if_doc.drg) if if_doc else None
     base = UrRow(chart.encounter_id, now.drg, now.description, known.gmlos if known else None,

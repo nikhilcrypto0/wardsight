@@ -116,11 +116,46 @@ Charts with AI notes: {notes['llm']} of {notes['total']}{
 """
 
 
+def refresh_work(db: Path, work: Path) -> int:
+    """Rebuild the working copy from the current database, keeping AI notes already paid for.
+
+    Notes carry over only for charts whose events are byte-identical in both, so a rebuilt
+    ward (new charts, relabelled answer key) never loses paid work and never reuses notes
+    written for a chart that has changed. Returns how many charts kept their AI notes.
+    """
+    fresh = work.with_suffix(".refresh.duckdb")
+    shutil.copy(db, fresh)
+    kept = 0
+    with duckdb.connect(str(fresh)) as con:
+        con.execute(NOTES_DDL)
+        if work.exists():
+            con.execute(f"ATTACH '{work}' AS old (READ_ONLY)")
+            has_ledger = con.execute("SELECT count(*) FROM duckdb_tables() WHERE database_name = 'old' "
+                                     "AND schema_name = 'ops' AND table_name = 'llm_ledger'").fetchone()[0]
+            con.execute("""CREATE TEMP TABLE same AS
+                SELECT n.encounter_id FROM (SELECT DISTINCT encounter_id FROM old.ehr.notes WHERE source = 'llm') n
+                WHERE n.encounter_id IN (SELECT encounter_id FROM ehr.encounters)
+                  AND (SELECT list(e ORDER BY e.t_hours, e.kind, e.key, e.text) FROM ehr.events e
+                       WHERE e.encounter_id = n.encounter_id)
+                    = (SELECT list(o ORDER BY o.t_hours, o.kind, o.key, o.text) FROM old.ehr.events o
+                       WHERE o.encounter_id = n.encounter_id)""")
+            kept = con.execute("SELECT count(*) FROM same").fetchone()[0]
+            con.execute("DELETE FROM ehr.notes WHERE encounter_id IN (SELECT encounter_id FROM same)")
+            con.execute("""INSERT INTO ehr.notes SELECT * FROM old.ehr.notes
+                           WHERE source = 'llm' AND encounter_id IN (SELECT encounter_id FROM same)""")
+            if has_ledger:  # the bill so far travels with the notes
+                con.execute("CREATE SCHEMA IF NOT EXISTS ops")
+                con.execute("CREATE OR REPLACE TABLE ops.llm_ledger AS SELECT * FROM old.ops.llm_ledger")
+            con.execute("DETACH old")
+    fresh.replace(work)
+    log.info("working copy refreshed; %d charts kept their AI notes", kept)
+    return kept
+
+
 def run_eval(db: Path, work: Path, config: Path, generate: Generate, model: str,
              limit: int | None, report: Path) -> dict:
     base = baseline(db)
-    if not work.exists():
-        shutil.copy(db, work)
+    refresh_work(db, work)
     stats = write_notes(work, config, generate, model, limit, split=SPLIT)
     with duckdb.connect(str(work)) as con:
         new = _fresh_scan_score(con)

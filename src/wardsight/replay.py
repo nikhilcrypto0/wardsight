@@ -51,7 +51,7 @@ def chart_at(chart: Chart, hour: float) -> Chart:
 
 def detection_hour(chart: Chart, flag: Flag) -> float:
     stay_h = chart.los_days * 24
-    if flag.kind == "unsupported_dx":
+    if flag.kind in ("unsupported_dx", "conflicting_dx"):  # visible once the notes are written
         return float(min(UNSUPPORTED_AFTER_H, stay_h - 1))
     hour = CHECK_EVERY_H
     while hour < stay_h:
@@ -84,6 +84,8 @@ def _resolved(condition: str, kind: str, option_index: int) -> bool:
     """Same outcome rules as the live workflow (workflow/actions.py)."""
     if kind == "unsupported_dx":
         return option_index == 1  # ruled out
+    if kind == "conflicting_dx":
+        return option_index in (0, 1)  # either answer settles the disagreement
     if condition == "hf":
         return option_index in (0, HF_ACUTE_ON_CHRONIC_OPTION)  # both are acute systolic
     return option_index == 0

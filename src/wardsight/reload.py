@@ -23,9 +23,9 @@ def load_encounters(con: duckdb.DuckDBPyConnection) -> list[Encounter]:
         events[eid].append(Event(t, kind, key, value, text))
 
     mentions: dict[str, list[Mention]] = defaultdict(list)
-    for eid, code, term, assertion in con.execute(
-            "SELECT encounter_id, icd10, term, assertion FROM truth.doc_spec").fetchall():
-        mentions[eid].append(Mention(code, term, assertion))
+    for eid, code, term, assertion, notes in con.execute(
+            "SELECT encounter_id, icd10, term, assertion, notes FROM truth.doc_spec").fetchall():
+        mentions[eid].append(Mention(code, term, assertion, tuple(n for n in (notes or "").split(",") if n)))
 
     rows = con.execute("""
         SELECT e.encounter_id, e.split, e.patient_id, p.age, p.sex, p.source, e.admit_ts, e.los_days,

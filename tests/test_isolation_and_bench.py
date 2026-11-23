@@ -7,6 +7,7 @@ from pathlib import Path
 
 import duckdb
 import pytest
+from counts import DEV_FLAGS
 
 from wardsight.bench import run
 from wardsight.engine.scan import scan
@@ -52,7 +53,7 @@ def test_every_dev_flag_gets_a_compliant_query(ward: Path):
     with duckdb.connect(str(ward)) as con:
         results = draft_all(con, "dev", template_drafter, "template", 1)
         statuses = {r[0] for r in con.execute("SELECT DISTINCT status FROM ops.queries").fetchall()}
-    assert len(results) == 75 and all(r.lint.ok for r in results)
+    assert len(results) == DEV_FLAGS and all(r.lint.ok for r in results)
     assert statuses == {"pending_review"}
 
 

@@ -4,7 +4,7 @@
 import { demoApi } from "./demo";
 import { IS_PUBLIC } from "./mode";
 
-export type Kind = "missing_dx" | "unsupported_dx";
+export type Kind = "missing_dx" | "unsupported_dx" | "unspecified_dx" | "conflicting_dx";
 export type Status = "pending_review" | "needs_rewrite" | "rejected" | "sent" | "answered" | "resolved";
 
 export interface PriorityPart {
@@ -140,6 +140,8 @@ export interface Leadership {
     gaps: number;
     missing: number;
     unsupported: number;
+    unspecified: number;
+    conflicting: number;
     resolved: number;
     weight_change: number;
   }[];

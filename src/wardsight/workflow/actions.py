@@ -108,9 +108,9 @@ def reject(con: duckdb.DuckDBPyConnection, query_id: str, reviewer: str, reason:
 def addendum_text(q: QueryRow, option: str, comment: str) -> str | None:
     if option in (OTHER, UNDETERMINED):
         return None
-    if q.kind == "missing_dx" and option == q.options[0]:
+    if q.kind in ("missing_dx", "unspecified_dx") and option == q.options[0]:
         statement = CONFIRMED_PHRASE[q.condition]
-    elif q.kind == "missing_dx" and option == HF_ACUTE_ON_CHRONIC:
+    elif q.kind in ("missing_dx", "unspecified_dx") and option == HF_ACUTE_ON_CHRONIC:
         statement = "acute on chronic systolic heart failure"
     else:
         statement = option

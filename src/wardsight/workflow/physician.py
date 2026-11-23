@@ -29,6 +29,10 @@ def _roll(query_id: str) -> int:
 def rule_based_reply(query_id: str, kind: str, options: tuple[str, ...]) -> Reply:
     roll = _roll(query_id)
     undetermined = len(options) - 1
+    if kind == "conflicting_dx":
+        if roll < RULE_OUT_PCT:
+            return Reply(1, "Reviewed both notes; it was ruled out. Addendum entered.")
+        return Reply(0, "It is present; the later note was carried forward in error. Addendum entered.")
     if kind == "unsupported_dx":
         if roll < RULE_OUT_PCT:
             return Reply(1, "Reviewed the labs again; agree it is not supported. Ruled out.")

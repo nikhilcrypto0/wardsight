@@ -42,6 +42,7 @@ class Mention:
     icd10: str
     term: str
     assertion: str  # "present" | "negated"
+    notes: tuple[str, ...] = ()  # which notes must carry it; empty = every note
 
 
 @dataclass(frozen=True)

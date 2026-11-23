@@ -22,9 +22,11 @@ def test_group_counts(dev):
 
 def test_expected_flags(dev):
     _, answers = dev
-    expected = {"missing": "missing_dx", "unsupported": "unsupported_dx"}
+    expected = {"missing": "missing_dx", "unsupported": "unsupported_dx",
+                "unspecified": "unspecified_dx", "conflicting": "conflicting_dx"}
     for a in answers:
-        assert a.expected_flag == expected.get(a.group, "none"), a
+        want = "unspecified_dx" if (a.group, a.condition) == ("missing", "hf") else expected.get(a.group, "none")
+        assert a.expected_flag == want, a  # vague "CHF" is a specificity gap (relabelled 2026-11-23)
 
 
 def test_notes_spec_matches_answer_key(dev):

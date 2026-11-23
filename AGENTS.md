@@ -3,7 +3,7 @@
 > Last verified: 2026-11-23
 
 AI command center for hospital clinical documentation integrity (CDI), running on a fully
-synthetic hospital: 200 development + 100 held-out stays, replayed on a 56-bed unit. Plain code
+synthetic hospital: 234 development + 100 held-out stays, replayed on a 67-bed unit. Plain code
 makes clinical calls, an LLM only drafts wording, a human approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntUk1Y17AmzHjPfSfuaP
 
 ## Commands

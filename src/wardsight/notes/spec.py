@@ -24,8 +24,10 @@ CONDITION_TERMS = {
     "I50.21": ("systolic heart failure", "hfref", "acute heart failure",
                "reduced ejection fraction heart failure", "acute chf"),
     "I50.9": ("heart failure", "chf"),
+    "D64.9": ("anemia", "anaemia"),
 }
 HEART_FAILURE = {"I50.21", "I50.9"}
+ANEMIA = {"D62", "D64.9"}
 
 NOTE_TYPES = ("history_and_physical", "progress_note", "discharge_summary")
 
@@ -85,10 +87,12 @@ def _summarize(events: list[Event], kind: str) -> str:
 def user_prompt(enc: Encounter) -> str:
     required = [m.term for m in enc.mentions if m.assertion == "present"]
     negations = [m.term for m in enc.mentions if m.assertion == "negated"]
+    placed = [f"'{m.term}' ONLY in: {', '.join(m.notes)}" for m in enc.mentions if m.notes]
     return "\n".join([
         "CHART DATA:", chart_digest(enc), "",
         "REQUIRED diagnoses (exact wording): " + "; ".join(required),
         "REQUIRED NEGATIONS (word for word): " + ("; ".join(negations) if negations else "none"),
+        "PLACEMENT (write these only in the named notes, nowhere else): " + ("; ".join(placed) if placed else "none"),
     ])
 
 
@@ -98,6 +102,8 @@ def forbidden_terms(mentions: tuple[Mention, ...]) -> list[str]:
     allowed = set(present)
     if present & HEART_FAILURE:
         allowed |= {"I50.9"}  # "heart failure" is fine once any HF code is documented
+    if present & ANEMIA:
+        allowed |= {"D64.9"}  # likewise "anemia" once any anemia code is documented
     terms: list[str] = []
     for code, words in CONDITION_TERMS.items():
         if code not in allowed:
@@ -111,9 +117,16 @@ def check_notes(note_set: NoteSet, mentions: tuple[Mention, ...]) -> CheckResult
     if types != sorted(NOTE_TYPES):
         problems.append(f"expected one note of each type {NOTE_TYPES}, got {types}")
     text = " ".join(n.text for n in note_set.notes).lower()
+    by_type = {n.note_type: n.text.lower() for n in note_set.notes}
     for m in mentions:
         if m.term.lower() not in text:
             problems.append(f"missing required {m.assertion} wording: '{m.term}'")
+        for note_type in m.notes:
+            if m.term.lower() not in by_type.get(note_type, ""):
+                problems.append(f"'{m.term}' must appear in the {note_type}")
+        for note_type, note_text in by_type.items():
+            if m.notes and note_type not in m.notes and _placed_elsewhere(m, note_text, mentions):
+                problems.append(f"'{m.term}' must appear only in {', '.join(m.notes)}, not the {note_type}")
     # Only negation phrases may contain a forbidden word ("no evidence of sepsis").
     # Present terms are NOT erased: erasing "CHF" would hide a leak like "acute CHF".
     scrubbed = text
@@ -124,6 +137,16 @@ def check_notes(note_set: NoteSet, mentions: tuple[Mention, ...]) -> CheckResult
         if _contains_word(scrubbed, word):
             problems.append(f"names a diagnosis it must not: '{word}'")
     return CheckResult(not problems, tuple(problems))
+
+
+def _placed_elsewhere(m: Mention, note_text: str, mentions: tuple[Mention, ...]) -> bool:
+    """A placed mention leaked into another note. Other mentions' phrases are ignored first, so
+    'sepsis' inside the planted 'no evidence of sepsis' does not count as a leak."""
+    scrubbed = note_text
+    for other in mentions:
+        if other is not m:
+            scrubbed = scrubbed.replace(other.term.lower(), " ")
+    return _contains_word(scrubbed, m.term.lower())
 
 
 def _contains_word(text: str, word: str) -> bool:

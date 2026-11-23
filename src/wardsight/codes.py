@@ -39,6 +39,7 @@ ICD10 = {
     "J96.01": "Acute respiratory failure with hypoxia",
     "I50.21": "Acute systolic (congestive) heart failure",
     "I50.9": "Heart failure, unspecified",
+    "D64.9": "Anemia, unspecified",
     # chronic conditions
     "I10": "Essential (primary) hypertension",
     "E11.9": "Type 2 diabetes mellitus without complications",

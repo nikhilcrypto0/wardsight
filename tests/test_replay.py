@@ -8,6 +8,7 @@ from pathlib import Path
 
 import duckdb
 import pytest
+from counts import DEV_CHARTS, DEV_FLAGS
 
 from wardsight.engine.chart import load_charts
 from wardsight.engine.evidence import RULES
@@ -35,8 +36,8 @@ def test_every_dev_gap_is_replayed_with_its_workflow(ward):
     by_type = defaultdict(list)
     for e in data["events"]:
         by_type[e["type"]].append(e)
-    assert len(by_type["admit"]) == len(by_type["discharge"]) == 200
-    assert len(by_type["flag"]) == len(by_type["query_sent"]) == len(by_type["answered"]) == 75
+    assert len(by_type["admit"]) == len(by_type["discharge"]) == DEV_CHARTS
+    assert len(by_type["flag"]) == len(by_type["query_sent"]) == len(by_type["answered"]) == DEV_FLAGS
     assert data["events"] == sorted(data["events"], key=lambda e: (e["t"], e["type"] != "discharge"))
 
 

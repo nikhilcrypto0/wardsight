@@ -13,7 +13,7 @@ from pathlib import Path
 
 from wardsight.fhir_export import write_bundles
 from wardsight.patients import builtin_patients, synthea_patients
-from wardsight.planter import GROUP_COUNTS, build_split
+from wardsight.planter import EXTRA_COUNTS, GROUP_COUNTS, build_extra, build_split
 from wardsight.store import write_db
 
 log = logging.getLogger("wardsight.factory")
@@ -23,7 +23,9 @@ DEFAULT_SEED = 7
 def run(out: Path, seed: int, synthea_dir: Path | None) -> dict[str, Counter]:
     sizes = {split: sum(c.values()) for split, c in GROUP_COUNTS.items()}
     total = sum(sizes.values())
-    patients = synthea_patients(synthea_dir, total) if synthea_dir else builtin_patients(total, seed)
+    extra = sum(EXTRA_COUNTS.values())
+    patients = (synthea_patients(synthea_dir, total + extra) if synthea_dir
+                else builtin_patients(total + extra, seed))
 
     encounters, answers, start = [], [], 0
     for split, size in sizes.items():
@@ -31,6 +33,10 @@ def run(out: Path, seed: int, synthea_dir: Path | None) -> dict[str, Counter]:
         encounters += enc
         answers += ans
         start += size
+    # U3 charts come last, from patients after the held-out slice, so the originals never shift
+    enc, ans = build_extra(patients[start:start + extra], seed)
+    encounters += enc
+    answers += ans
 
     write_db(out / "wardsight.duckdb", encounters, answers)
     write_bundles(out / "fhir", encounters)

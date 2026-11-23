@@ -15,7 +15,7 @@ watch the billing category update. [How it is tested, and what is not proven yet
 
 ![CI](https://github.com/nikhilcrypto0/wardsight/actions/workflows/ci.yml/badge.svg)
 
-![Ward replay: 200 synthetic patients, gaps caught while they are still admitted](docs/screenshots/ward-replay.jpg)
+![Ward replay: 234 synthetic patients, gaps caught while they are still admitted](docs/screenshots/ward-replay.jpg)
 
 | CDI worklist | Chart with a compliant draft query |
 | --- | --- |
@@ -44,7 +44,7 @@ browser (`web/app/lib/demo.ts`) replays those outcomes; each visitor's clicks st
 
 Two tests keep the browser honest (`cd web && npm test`, also in CI):
 - the browser copy of the compliance check gives the same verdict as the Python one on 2,250 cases;
-- working all 75 queries in the browser lands on exactly the engine's totals (statuses, open gaps, case
+- working every query in the browser lands on exactly the engine's totals (statuses, open gaps, case
   mix, utilization review).
 
 ## Reading real FHIR data (milestone 7, part 1)
@@ -73,10 +73,10 @@ uv run wardsight-fhir --server https://r4.smarthealthit.org --patient <id>   # p
 
 ## Ward replay (milestone 5)
 
-The dev ward over 14 days of admissions on a 56-bed unit. Every 6 hours the engine re-reads each chart
+The dev ward over 14 days of admissions on a 67-bed unit. Every 6 hours the engine re-reads each chart
 as it stood at that moment, so a gap is raised at the first hour its evidence exists, while the patient
 is still admitted. Queries are then approved, answered by the simulated physician, and the billing
-category updates. Over the replay: 75 gaps caught, 57 resolved, 41 billing categories corrected (some
+category updates. Over the replay: 95 gaps caught, 76 resolved, 50 billing categories corrected (some
 up, some down: unsupported diagnoses ruled out lower the bill).
 
 ```
@@ -103,11 +103,20 @@ Plain code, no AI, reading only what a hospital system would hold.
    behind every decision (e.g. "MAP 61 mmHg at hour 0; platelets 116").
 2. **Documentation reader** finds diagnoses in the note text, with synonyms and negation
    ("acute kidney injury ruled out" does not count).
-3. **Gap finder** raises `missing_dx` (evidence met, never documented) and `unsupported_dx`
-   (documented, evidence absent), each with the billing category (MS-DRG v44) now and if resolved.
+3. **Gap finder** raises four alert types, the reasons to query in the ACDIS/AHIMA compliant query
+   brief, each with the billing category (MS-DRG v44) now and if resolved:
+   - `missing_dx`: evidence met, never documented
+   - `unsupported_dx`: documented, evidence absent
+   - `unspecified_dx`: evidence supports a specific diagnosis, the notes use only a vague term
+     ("CHF" for acute systolic heart failure, "anemia" for acute blood loss anemia)
+   - `conflicting_dx`: one note states a diagnosis, another rules it out, no addendum settles it
+     (stated and later "resolved" is a change over time, not a conflict)
 
-Dev-set score with template notes: 75 of 75 planted gaps caught, 0 false alarms. Template notes use
-clean wording, so this is the easy case; LLM-written notes and the held-out set are the real test.
+Dev-set score with template notes: 95 of 95 planted gaps caught, 0 false alarms, including near-miss
+charts for each alert type. On AI-written notes (`uv run wardsight-llm-eval`, gpt-5.4-mini, the original
+200 dev charts, about $0.94): 75 of 75, 0 false alarms ([report](docs/eval/llm-notes-dev.md)). Those AI
+notes still use set wording per diagnosis, so free-form shorthand is the next test; the held-out set is
+scored once, at the end.
 
 ## Physician queries (milestone 3)
 
@@ -122,7 +131,7 @@ Every flag becomes a draft query to the physician, waiting for a human reviewer.
   diagnosis, and no number that is not in the chart (so the AI cannot invent values).
 - A rejected draft is retried with the problems listed; one that still fails is left for a human.
 
-Dev set: 75 flags, 75 queries, all pass the rules check.
+Dev set: 95 flags, 95 queries, all pass the rules check.
 
 Not every gap changes payment: cellulitis and UTI groups split only on major complications, so a
 complication like acute kidney injury raises severity there without moving the DRG.

@@ -33,7 +33,9 @@ NUMBER = re.compile(r"\d+(?:\.\d+)?")
 MAX_STEM_CHARS = 700
 # A new-diagnosis query needs a clinical picture; a validation query must at least show
 # what the record actually contains for the documented diagnosis.
-MIN_INDICATORS = {"missing_dx": 2, "unsupported_dx": 1}
+MIN_INDICATORS = {"missing_dx": 2, "unsupported_dx": 1, "unspecified_dx": 2, "conflicting_dx": 1}
+# Kinds where the queried diagnosis is not yet documented, so the stem must not name it
+NEW_DIAGNOSIS_KINDS = ("missing_dx", "unspecified_dx")
 YES_NO = {"yes", "no"}
 
 
@@ -56,7 +58,7 @@ def lint_query(stem: str, options: tuple[str, ...], indicators: tuple[str, ...],
         problems.append(f"mentions financial impact: '{m.group(0)}'")
     if m := LEADING.search(stem):
         problems.append(f"leading wording: '{m.group(0)}'")
-    if kind == "missing_dx":
+    if kind in NEW_DIAGNOSIS_KINDS:
         for phrase in _target_phrases(condition):
             if re.search(rf"(?<![a-z]){re.escape(phrase)}(?![a-z])", text):
                 problems.append(f"names the diagnosis in the question: '{phrase}' (belongs only in the options)")
@@ -72,7 +74,7 @@ def lint_query(stem: str, options: tuple[str, ...], indicators: tuple[str, ...],
     lowered = {o.lower() for o in options}
     if OTHER not in options or UNDETERMINED not in options:
         problems.append("options must include 'Other (please specify)' and 'Unable to determine'")
-    if kind == "missing_dx" and lowered & YES_NO:
+    if kind in NEW_DIAGNOSIS_KINDS and lowered & YES_NO:
         problems.append("yes/no options may not be used to introduce a new diagnosis")
     if len(options) - 2 < 2:
         problems.append("needs at least two clinically reasonable choices besides Other / Unable to determine")

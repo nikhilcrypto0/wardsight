@@ -19,7 +19,7 @@ interface ReplayEvent {
   type: "admit" | "discharge" | "flag" | "query_sent" | "answered";
   encounter_id: string;
   condition?: string;
-  kind?: "missing_dx" | "unsupported_dx";
+  kind?: "missing_dx" | "unsupported_dx" | "unspecified_dx" | "conflicting_dx";
   evidence?: string;
   answer?: string;
   resolved?: boolean;
@@ -70,9 +70,10 @@ function describe(e: ReplayEvent, stays: Map<string, Stay>): string {
     case "admit":
       return `admitted, ${stays.get(e.encounter_id)?.reason ?? ""}`;
     case "flag":
-      return e.kind === "missing_dx"
-        ? `${name}: evidence found (${e.evidence}), not in the notes`
-        : `${name}: documented, but the chart does not support it`;
+      if (e.kind === "missing_dx") return `${name}: evidence found (${e.evidence}), not in the notes`;
+      if (e.kind === "unspecified_dx") return `${name}: evidence found, but the notes use only a vague term`;
+      if (e.kind === "conflicting_dx") return `${name}: one note states it, another rules it out`;
+      return `${name}: documented, but the chart does not support it`;
     case "query_sent":
       return `${name}: query approved and sent to the physician`;
     case "answered":

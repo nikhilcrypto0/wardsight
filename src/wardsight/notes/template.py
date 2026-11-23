@@ -27,19 +27,23 @@ def template_notes(enc: Encounter, rng: random.Random) -> NoteSet:
     digest_lines = chart_digest(enc).splitlines()
     first_day = "\n".join(line for line in digest_lines if line.startswith("Day 0"))
     later = "\n".join(line for line in digest_lines if line.startswith("Day 1"))
-    assessment = " ".join(f"{m.term[0].upper()}{m.term[1:]}." for m in enc.mentions)
+    def assessment_for(note_type: str) -> str:
+        return " ".join(f"{m.term[0].upper()}{m.term[1:]}." for m in enc.mentions
+                        if not m.notes or note_type in m.notes)
+
     reason = PRINCIPAL_TERMS[enc.principal_icd10]
     who = f"{enc.patient.age}-year-old {enc.patient.sex}"
     last_day = enc.los_days - 1
     texts = {
         "history_and_physical": (0, (f"HISTORY AND PHYSICAL. {rng.choice(OPENERS)} {who} admitted for {reason}. "
-                                    f"Admission data:\n{first_day}\nAssessment and plan: {assessment}")),
+                                    f"Admission data:\n{first_day}\nAssessment and plan: {assessment_for('history_and_physical')}")),
         "progress_note": (1, (f"PROGRESS NOTE, hospital day 1. {rng.choice(OPENERS)} Data:\n{later}\n"
-                             f"Assessment and plan: {assessment} Continue current management.")),
+                             f"Assessment and plan: {assessment_for('progress_note')} Continue current management.")),
         "discharge_summary": (last_day, (f"DISCHARGE SUMMARY. {who}, length of stay {enc.los_days} days. "
                                         f"Hospital course: treated per the plan above with daily labs and "
                                         f"vital signs; stable for discharge. Medications reconciled and "
-                                        f"return precautions reviewed. Discharge diagnoses: {assessment} "
+                                        f"return precautions reviewed. Discharge diagnoses: "
+                                        f"{assessment_for('discharge_summary')} "
                                         f"Follow up with primary care in one week. {rng.choice(OPENERS)}")),
     }
     return NoteSet(notes=[Note(note_type=k, hospital_day=d, text=t) for k, (d, t) in texts.items()])

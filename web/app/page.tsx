@@ -64,7 +64,7 @@ function WorklistPage() {
 
   return (
     <div className="space-y-8">
-      {IS_PUBLIC && <DemoIntro />}
+      {IS_PUBLIC && <DemoIntro charts={summary.charts} gaps={openFlags} />}
       <section>
         <h1 className="text-2xl font-semibold tracking-tight">Clinical documentation worklist</h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -150,12 +150,12 @@ function WorklistPage() {
 }
 
 /** First thing a visitor to the hosted demo sees: what this is and where to click. */
-function DemoIntro() {
+function DemoIntro({ charts, gaps }: { charts: number; gaps: number }) {
   return (
     <section className="rounded-xl bg-slate-900 p-6 text-white">
       <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">Try it: you are the CDI reviewer</p>
       <h2 className="mt-2 text-xl font-semibold tracking-tight">
-        200 synthetic inpatients. The engine found 75 places where the chart and the notes disagree.
+        {charts} synthetic inpatients. The engine found {gaps} places where the chart and the notes disagree.
       </h2>
       <ol className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-3">
         <li>
@@ -197,7 +197,13 @@ const SHORT: Record<string, string> = {
 function PriorityCell({ row }: { row: WorklistRow }) {
   if (row.priority == null || !row.priority_parts) return <span className="text-slate-400">closed</span>;
   // Both directions rank the same way: an unsupported diagnosis is a compliance risk, not a missed sale.
-  const up = row.kind === "missing_dx";
+  const direction: Record<WorklistRow["kind"], [string, string]> = {
+    missing_dx: ["Corrects up: missing diagnosis", "text-teal-700"],
+    unspecified_dx: ["Corrects up: not fully specified", "text-teal-700"],
+    unsupported_dx: ["Corrects down: unsupported diagnosis", "text-rose-700"],
+    conflicting_dx: ["Clarifies: notes disagree", "text-violet-700"],
+  };
+  const [label, labelTone] = direction[row.kind];
   const tone = row.priority >= 60 ? "bg-rose-600" : row.priority >= 35 ? "bg-amber-500" : "bg-slate-400";
   return (
     <div title={row.priority_parts.map((p) => `${p.label}: +${p.points} (${p.why})`).join("\n")}>
@@ -205,9 +211,7 @@ function PriorityCell({ row }: { row: WorklistRow }) {
         <span className={`inline-block h-2 w-2 rounded-full ${tone}`} />
         <span className="font-mono text-base font-medium">{row.priority}</span>
       </div>
-      <div className={`mt-0.5 text-[11px] font-medium whitespace-nowrap ${up ? "text-teal-700" : "text-rose-700"}`}>
-        {up ? "Corrects up: missing diagnosis" : "Corrects down: unsupported diagnosis"}
-      </div>
+      <div className={`mt-0.5 text-[11px] font-medium whitespace-nowrap ${labelTone}`}>{label}</div>
       <div className="text-[11px] text-slate-500 whitespace-nowrap">
         {row.priority_parts
           .filter((p) => p.points > 0)

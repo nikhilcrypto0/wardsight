@@ -102,6 +102,8 @@ function LeadershipScreen() {
                 <th className="py-2 font-medium">Condition</th>
                 <th className="py-2 font-medium text-right">Missing</th>
                 <th className="py-2 font-medium text-right">Unsupported</th>
+                <th className="py-2 font-medium text-right">Not specific</th>
+                <th className="py-2 font-medium text-right">Conflicting</th>
                 <th className="py-2 font-medium text-right">Resolved</th>
                 <th className="py-2 font-medium text-right">Weight change</th>
               </tr>
@@ -112,6 +114,8 @@ function LeadershipScreen() {
                   <td className="py-2">{CONDITION[r.condition]}</td>
                   <td className="py-2 text-right font-mono">{r.missing}</td>
                   <td className="py-2 text-right font-mono">{r.unsupported}</td>
+                  <td className="py-2 text-right font-mono">{r.unspecified}</td>
+                  <td className="py-2 text-right font-mono">{r.conflicting}</td>
                   <td className="py-2 text-right font-mono">{r.resolved}</td>
                   <td className={`py-2 text-right font-mono ${r.weight_change > 0 ? "text-teal-700" : r.weight_change < 0 ? "text-rose-700" : "text-slate-400"}`}>
                     {r.weight_change === 0 ? "0" : signed(r.weight_change)}

@@ -393,11 +393,12 @@ export const demoApi: Api = {
       if (o) drgs[q.encounter_id] = o.drgs;
       statuses[s.status] = (statuses[s.status] ?? 0) + 1;
       const row = byCondition.get(q.condition) ?? {
-        condition: q.condition, gaps: 0, missing: 0, unsupported: 0, resolved: 0, weight_change: 0,
+        condition: q.condition, gaps: 0, missing: 0, unsupported: 0, unspecified: 0, conflicting: 0,
+        resolved: 0, weight_change: 0,
       };
       row.gaps += 1;
-      if (q.kind === "missing_dx") row.missing += 1;
-      else row.unsupported += 1;
+      const column = q.kind.replace(/_dx$/, "") as "missing" | "unsupported" | "unspecified" | "conflicting";
+      row[column] += 1;
       if (s.status === "resolved" && o) {
         row.resolved += 1;
         const [b, a] = [ix.weights[String(o.drg_before)], ix.weights[String(o.drg_after)]];

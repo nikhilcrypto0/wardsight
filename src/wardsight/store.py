@@ -29,7 +29,8 @@ CREATE TABLE ehr.events (encounter_id VARCHAR, ts TIMESTAMP, t_hours DOUBLE, kin
     key VARCHAR, loinc VARCHAR, name VARCHAR, value DOUBLE, unit VARCHAR, text VARCHAR);
 CREATE TABLE truth.scenarios (encounter_id VARCHAR PRIMARY KEY, split VARCHAR, grp VARCHAR,
     condition VARCHAR, evidence VARCHAR, principal_icd10 VARCHAR);
-CREATE TABLE truth.doc_spec (encounter_id VARCHAR, icd10 VARCHAR, term VARCHAR, assertion VARCHAR);
+CREATE TABLE truth.doc_spec (encounter_id VARCHAR, icd10 VARCHAR, term VARCHAR, assertion VARCHAR,
+    notes VARCHAR);
 CREATE TABLE truth.answer_key (encounter_id VARCHAR PRIMARY KEY, split VARCHAR, grp VARCHAR,
     condition VARCHAR, evidence VARCHAR, true_icd10 VARCHAR, documented_icd10 VARCHAR,
     expected_flag VARCHAR, detail VARCHAR);
@@ -60,8 +61,8 @@ def write_db(path: Path, encounters: list[Encounter], answers: list[AnswerKeyRow
         con.executemany("INSERT INTO truth.scenarios VALUES (?, ?, ?, ?, ?, ?)",
                         [(e.encounter_id, e.split, e.group, e.condition, e.evidence,
                           e.principal_icd10) for e in encounters])
-        con.executemany("INSERT INTO truth.doc_spec VALUES (?, ?, ?, ?)",
-                        [(e.encounter_id, m.icd10, m.term, m.assertion)
+        con.executemany("INSERT INTO truth.doc_spec VALUES (?, ?, ?, ?, ?)",
+                        [(e.encounter_id, m.icd10, m.term, m.assertion, ",".join(m.notes))
                          for e in encounters for m in e.mentions])
         con.executemany("INSERT INTO truth.answer_key VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         [(a.encounter_id, a.split, a.group, a.condition, a.evidence, a.true_icd10,

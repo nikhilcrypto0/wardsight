@@ -39,7 +39,7 @@ cd web && vercel deploy --prod
 
 ## Check after every deploy
 
-- Home page shows the "you are the CDI reviewer" intro and the worklist (75 gaps).
+- Home page shows the "you are the CDI reviewer" intro and the worklist (95 gaps on a fresh visit).
 - `/encounters/D0011`: approve the query, then in `/inbox` let the simulated physician reply; the chart
   shows billing category 872 and the audit log has three new rows. Reset from `/audit`.
 - `/api/summary` returns 404.

@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from wardsight.notes.budget import Ledger
 from wardsight.queries.lint import LintResult, lint_query
-from wardsight.queries.options import options_for
+from wardsight.queries.options import CONDITION_NAMES, options_for
 
 HOUR_PREFIX = re.compile(r"^h(\d+(?:\.\d+)?):\s*")
 
@@ -27,11 +27,13 @@ HOUR_PREFIX = re.compile(r"^h(\d+(?:\.\d+)?):\s*")
 class QueryRequest:
     encounter_id: str
     condition: str
-    kind: str                # "missing_dx" | "unsupported_dx"
-    documented_phrase: str   # what the notes say (unsupported) or "" (missing)
+    kind: str                # "missing_dx" | "unsupported_dx" | "unspecified_dx" | "conflicting_dx"
+    documented_phrase: str   # what the notes say (unsupported, conflicting) or ""
     vague_hf: bool           # notes say only unspecified heart failure
     indicators: tuple[str, ...]
     options: tuple[str, ...]
+    conflict: str = ""       # which notes disagree (conflicting)
+    vague_anemia: bool = False  # notes say only "anemia"
 
 
 @dataclass(frozen=True)
@@ -66,9 +68,13 @@ def indicators_from_evidence(evidence: str) -> tuple[str, ...]:
 def make_request(encounter_id: str, condition: str, kind: str, detail: str, evidence: str) -> QueryRequest:
     quoted = re.search(r"'([^']+)'", detail)
     phrase = quoted.group(1) if kind == "unsupported_dx" and quoted else ""
-    vague = kind == "missing_dx" and "unspecified heart failure" in detail
+    if kind == "conflicting_dx":
+        phrase = CONDITION_NAMES[condition]
+    vague = kind in ("missing_dx", "unspecified_dx") and "unspecified heart failure" in detail
+    anemia = kind == "unspecified_dx" and "unspecified anemia" in detail
     indicators = () if evidence.startswith("no relevant") else indicators_from_evidence(evidence)
-    return QueryRequest(encounter_id, condition, kind, phrase, vague, indicators, options_for(condition, kind))
+    return QueryRequest(encounter_id, condition, kind, phrase, vague, indicators, options_for(condition, kind),
+                        detail if kind == "conflicting_dx" else "", anemia)
 
 
 def template_stem(req: QueryRequest) -> str:
@@ -77,9 +83,16 @@ def template_stem(req: QueryRequest) -> str:
         return (f"The record documents {req.documented_phrase}. Clinical indicators in the record: {listed}. "
                 f"Based on your clinical judgment, can you please clarify whether this diagnosis is "
                 f"clinically supported?")
+    if req.kind == "conflicting_dx":
+        return (f"The documentation of {req.documented_phrase} is inconsistent: {req.conflict}. Clinical "
+                f"indicators in the record: {listed}. Based on your clinical judgment, can you please clarify "
+                f"whether {req.documented_phrase} is present?")
     if req.vague_hf:
         return (f"The record documents heart failure. Clinical indicators: {listed}. Based on your "
                 f"clinical judgment, can you please clarify the type and acuity of the heart failure?")
+    if req.vague_anemia:
+        return (f"The record documents anemia. Clinical indicators: {listed}. Based on your clinical "
+                f"judgment, can you please clarify the type or cause of the anemia?")
     return (f"Clinical indicators in this record: {listed}. Based on your clinical judgment, can you "
             f"please clarify the condition being evaluated and treated?")
 
@@ -100,13 +113,20 @@ Rules, all mandatory (ACDIS/AHIMA compliant query practice):
 
 
 def query_user_prompt(req: QueryRequest, problems: tuple[str, ...]) -> str:
-    lines = [f"Query type: {'clinical validation of a documented diagnosis' if req.kind == 'unsupported_dx' else 'new diagnosis clarification'}",
+    query_type = {"unsupported_dx": "clinical validation of a documented diagnosis",
+                  "conflicting_dx": "conflicting documentation between notes",
+                  "unspecified_dx": "specificity of a documented diagnosis"}.get(req.kind, "new diagnosis clarification")
+    lines = [f"Query type: {query_type}",
              "Clinical indicators: " + "; ".join(req.indicators),
              "Answer options (shown separately): " + " | ".join(req.options)]
     if req.documented_phrase:
         lines.append(f"The record currently documents: {req.documented_phrase}")
     if req.vague_hf:
         lines.append("The record documents heart failure without type or acuity; ask for type and acuity.")
+    if req.vague_anemia:
+        lines.append("The record documents anemia without type or cause; ask for the type or cause.")
+    if req.conflict:
+        lines.append(f"The notes disagree: {req.conflict}. Ask which is correct without favouring either.")
     if problems:
         lines.append("YOUR LAST DRAFT WAS REJECTED. Fix: " + "; ".join(problems))
     return "\n".join(lines)
