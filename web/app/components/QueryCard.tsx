@@ -109,6 +109,9 @@ export default function QueryCard({ query, onChanged }: QueryCardProps) {
           <div className="text-slate-600">
             DRG <DrgShift from={query.drg_before} to={query.drg_after} />
           </div>
+          <Link href={`/packet/${query.query_id}`} className="inline-block pt-1 text-teal-700 underline">
+            Audit-defense packet
+          </Link>
         </div>
       )}
 

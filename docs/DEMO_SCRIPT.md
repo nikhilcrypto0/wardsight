@@ -31,8 +31,8 @@ Keep it under 3:00. Re-record any segment rather than cutting mid-sentence.
 ## Facts to keep straight on camera
 
 - All data is synthetic (Synthea patients plus a scenario engine). No real patients.
-- Dev-set detection score: 95/95, 0 false alarms on template notes; on the original 200 charts rewritten
-  by an AI model, 75/75, 0 false alarms. Synthetic data, so do not quote it as clinical accuracy. The
+- Dev-set detection score: 95/95, 0 false alarms on template notes and on all 234 charts rewritten by an
+  AI model. Synthetic data, so do not quote it as clinical accuracy. The
   held-out set is scored once, at the end.
 - The physician is simulated (rule-based). Say "simulated physician".
 

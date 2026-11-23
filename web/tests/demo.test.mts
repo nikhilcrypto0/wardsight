@@ -61,4 +61,15 @@ test("working every query lands on the engine's ward totals", async () => {
   assert.deepEqual(summary.open_flags, expected.open_flags);
   assert.deepEqual(await demoApi.leadership(), expected.leadership);
   assert.deepEqual((await demoApi.ur()).counts, expected.ur_counts);
+
+  // the audit-defense packet matches the Python one, field for field (clock times aside)
+  const packet = structuredClone(await demoApi.packet("D0011-sepsis-missing")) as Record<string, any>;
+  packet.trail = packet.trail.map(({ ts: _ts, ...rest }: Record<string, unknown>) => rest);
+  delete packet.approval.at;
+  delete packet.answer.at;
+  assert.deepEqual(packet, expected.packet);
+});
+
+test("no packet before the physician has answered", async () => {
+  await assert.rejects(demoApi.packet("D0011-sepsis-missing"), /once the physician has answered/);
 });

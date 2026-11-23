@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from wardsight.api import reports
+from wardsight.api.packet import audit_packet
 from wardsight.engine.chart import load_charts
 from wardsight.engine.drg import coded_diagnoses, group
 from wardsight.queries.lint import lint_query
@@ -186,6 +187,10 @@ def create_app(db_path: Path) -> FastAPI:
     def answer(query_id: str, body: AnswerBody) -> dict:
         status = run_action(actions.answer, query_id, body.option_index, body.comment, body.physician)
         return {"status": status}
+
+    @app.get("/api/queries/{query_id}/packet")
+    def packet(query_id: str) -> dict:
+        return run_action(audit_packet, query_id)
 
     @app.post("/api/queries/{query_id}/simulate")
     def simulate(query_id: str) -> dict:

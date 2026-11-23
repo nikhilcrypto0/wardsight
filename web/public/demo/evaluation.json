@@ -76,41 +76,49 @@
  },
  "rules": [
   {
+   "key": "sepsis",
    "condition": "Sepsis",
    "source": "Sepsis-3 (Singer et al., JAMA 2016)",
    "rule": "Suspected infection (blood cultures and antibiotics) plus a SOFA rise of at least 2: MAP < 70 mmHg, platelets < 150 K/uL, bilirubin \u2265 1.2 mg/dL, creatinine rise from the patient's own low"
   },
   {
+   "key": "aki",
    "condition": "Acute kidney injury",
    "source": "KDIGO 2012 AKI guideline",
    "rule": "Creatinine up \u2265 0.3 mg/dL within 48 h, or to \u2265 1.5x an earlier value within 7 days. A stable high baseline (CKD) does not count"
   },
   {
+   "key": "hyponatremia",
    "condition": "Hyponatremia",
    "source": "Serum sodium < 135 mmol/L (standard definition)",
    "rule": "Sodium < 135 mmol/L that was clinically significant: treated (fluid restriction, salt tablets, tolvaptan, hypertonic saline) or checked \u2265 4 times in 48 h"
   },
   {
+   "key": "abla",
    "condition": "Acute blood loss anemia",
    "source": "Common CDI clinical indicators",
    "rule": "Hemoglobin drop \u2265 2 g/dL with a documented bleeding source or a transfusion"
   },
   {
+   "key": "arf",
    "condition": "Acute hypoxic respiratory failure",
    "source": "Common CDI clinical indicators",
    "rule": "At least 2 of: SpO2 < 91% on room air, PaO2 < 60 mmHg, respiratory rate > 28/min; plus oxygen therapy"
   },
   {
+   "key": "unspecified_dx",
    "condition": "Not fully specified (alert)",
    "source": "ACDIS/AHIMA compliant query practice (2022): imprecise documentation",
    "rule": "The evidence meets a specific diagnosis but the notes use only a vague term: 'CHF' for acute systolic heart failure, 'anemia' for acute blood loss anemia"
   },
   {
+   "key": "conflicting_dx",
    "condition": "Conflicting documentation (alert)",
    "source": "ACDIS/AHIMA compliant query practice (2022): conflicting documentation",
    "rule": "One note states a diagnosis and another note rules it out, with no physician addendum settling it. A diagnosis stated and later marked 'resolved' is a change, not a conflict"
   },
   {
+   "key": "hf",
    "condition": "Acute systolic heart failure",
    "source": "2022 AHA/ACC/HFSA guideline; ESC BNP guidance",
    "rule": "LVEF \u2264 40%, BNP > 400 pg/mL and an IV loop diuretic"

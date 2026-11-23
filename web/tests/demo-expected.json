@@ -97,6 +97,83 @@
     "unspecified_dx": 3,
     "unsupported_dx": 7
   },
+  "packet": {
+    "addendum": "ADDENDUM in response to documentation query: sepsis. Agree, thank you. Addendum entered.",
+    "alert": "missing_dx",
+    "answer": {
+      "by": "Dr. Simulated (physician agent)",
+      "comment": "Agree, thank you. Addendum entered.",
+      "option": "Sepsis"
+    },
+    "approval": {
+      "by": "CDI reviewer",
+      "edited": false
+    },
+    "condition": "sepsis",
+    "condition_name": "sepsis",
+    "encounter_id": "D0011",
+    "evidence": [
+      "blood cultures drawn at hour 1.5",
+      "antibiotics started at hour 2",
+      "MAP 63 mmHg at hour 0",
+      "platelets 121 K/uL at hour 1",
+      "bilirubin 1.62 mg/dL at hour 1"
+    ],
+    "outcome": {
+      "drg_after": 872,
+      "drg_before": 690,
+      "status": "resolved",
+      "weight_after": 1.0066,
+      "weight_before": 0.801
+    },
+    "patient": {
+      "age": 56,
+      "los_days": 5,
+      "reason_for_admission": "urinary tract infection",
+      "sex": "female"
+    },
+    "query": {
+      "drafter": "template",
+      "options": [
+        "Sepsis",
+        "Localized infection without sepsis",
+        "Other (please specify)",
+        "Unable to determine"
+      ],
+      "rules_check": {
+        "ok": true,
+        "problems": []
+      },
+      "standard": "ACDIS/AHIMA Guidelines for Achieving a Compliant Query Practice (2022 update)",
+      "stem": "Clinical indicators in this record: blood cultures drawn at hour 1.5; antibiotics started at hour 2; MAP 63 mmHg at hour 0; platelets 121 K/uL at hour 1; bilirubin 1.62 mg/dL at hour 1. Based on your clinical judgment, can you please clarify the condition being evaluated and treated?"
+    },
+    "query_id": "D0011-sepsis-missing",
+    "rules": [
+      {
+        "condition": "Sepsis",
+        "key": "sepsis",
+        "rule": "Suspected infection (blood cultures and antibiotics) plus a SOFA rise of at least 2: MAP < 70 mmHg, platelets < 150 K/uL, bilirubin \u2265 1.2 mg/dL, creatinine rise from the patient's own low",
+        "source": "Sepsis-3 (Singer et al., JAMA 2016)"
+      }
+    ],
+    "trail": [
+      {
+        "action": "approved_and_sent",
+        "actor": "CDI reviewer",
+        "detail": "Clinical indicators in this record: blood cultures drawn at hour 1.5; antibiotics started at hour 2; MAP 63 mmHg at hour 0; platelets 121 K/uL at hour 1; bilirubin 1.62 mg/dL at hour 1. Based on your clinical judgment, can you please clarify the condition being evaluated and treated?"
+      },
+      {
+        "action": "answered",
+        "actor": "Dr. Simulated (physician agent)",
+        "detail": "Sepsis | Agree, thank you. Addendum entered."
+      },
+      {
+        "action": "flag_resolved",
+        "actor": "wardsight",
+        "detail": "DRG 690 -> 872"
+      }
+    ]
+  },
   "statuses": {
     "answered": 19,
     "resolved": 76

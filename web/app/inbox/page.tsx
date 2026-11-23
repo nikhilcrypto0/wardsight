@@ -140,6 +140,9 @@ function InboxScreen() {
                   DRG <DrgShift from={item.drg_before} to={item.drg_after} />
                 </span>
                 <StatusBadge status={item.status} />
+                <Link href={`/packet/${item.query_id}`} className="text-xs text-teal-700 underline">
+                  Packet
+                </Link>
               </span>
             </div>
           ))}

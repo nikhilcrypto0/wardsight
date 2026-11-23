@@ -145,9 +145,9 @@ export default function EvaluationPage() {
         <h2 className="text-sm font-semibold text-amber-900">Not proven yet</h2>
         <ul className="mt-3 grid gap-3 text-sm text-amber-900/90 md:grid-cols-2">
           <li>
-            <span className="font-medium">Free-form wording.</span> The scores above use template notes. On the
-            original 200 development charts rewritten by an AI model (gpt-5.4-mini, 2026-11-23) the engine scored the
-            same, 75 of 75 with no false alarms. But those AI notes still had to use set wording for each diagnosis, so
+            <span className="font-medium">Free-form wording.</span> The scores above use template notes. With all 234
+            development charts rewritten by an AI model (gpt-5.4-mini, run on 2026-11-23) the engine scored the same,
+            95 of 95 with no false alarms. But those AI notes still had to use set wording for each diagnosis, so
             shorthand and hedging (&ldquo;AKI on CKD&rdquo;, &ldquo;?sepsis&rdquo;, &ldquo;concern for&rdquo;) are
             not tested yet.
           </li>

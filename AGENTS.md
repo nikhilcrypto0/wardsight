@@ -57,7 +57,9 @@ makes clinical calls, an LLM only drafts wording, a human approves anything that
 - `queries/` — `options.py` code-chosen answers, `lint.py` compliance gate, `draft.py` template +
   OpenAI drafters with retry, `run.py` review queue. The AI writes only the question stem.
 - `workflow/` — `actions.py` review/send/answer/addendum/rescan + `ops.audit`; `physician.py` simulated physician
-- `api/app.py` — FastAPI; `api/reports.py` — UR board + leadership metrics
+- `api/app.py` — FastAPI; `api/reports.py` — UR board + leadership metrics + physician response times;
+  `api/packet.py` — audit-defense packet per answered query; `rules_doc.py` — the clinical rules in words
+  (evaluation page + packets); `queries/priority.py` — worklist priority score
 - `engine/ur.py` — two-midnight + GMLOS review, case mix; `engine/drg_table.py` — v44 weights/GMLOS (sourced)
 - `replay.py` — ward replay timeline; `web/` — Next.js screens (replay, worklist, chart, inbox, UR,
   leadership, audit); public mode runs all of them in the browser via `web/app/lib/demo.ts`

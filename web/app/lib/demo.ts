@@ -13,6 +13,8 @@ import type {
   InboxItem,
   Kind,
   Leadership,
+  Packet,
+  ClinicalRule,
   Query,
   Status,
   Summary,
@@ -47,6 +49,7 @@ interface DemoQuery {
   indicators: string[];
   problems: string[];
   flag_kinds: Kind[];
+  drafter: string;
   simulated: { option_index: number; comment: string };
   outcomes: Outcome[];
 }
@@ -80,6 +83,17 @@ interface DemoState {
   audit: AuditRow[];
 }
 
+// Same names as queries/options.py CONDITION_NAMES
+const CONDITION_NAMES: Record<string, string> = {
+  aki: "acute kidney injury",
+  sepsis: "sepsis",
+  hyponatremia: "hyponatremia",
+  abla: "acute blood loss anemia",
+  arf: "acute hypoxic respiratory failure",
+  hf: "acute systolic heart failure",
+};
+const QUERY_STANDARD = "ACDIS/AHIMA Guidelines for Achieving a Compliant Query Practice (2022 update)";
+const SENT_ACTIONS = ["approved_and_sent", "edited_approved_and_sent"];
 const STALE_AFTER_HOURS = 48; // same threshold as api/reports.py
 const STORAGE_KEY = "wardsight-demo-v1";
 const UR_ORDER: Record<string, number> = {
@@ -428,6 +442,51 @@ export const demoApi: Api = {
       by_condition: [...byCondition.values()].sort((a, b) => a.condition.localeCompare(b.condition)),
       weights_source: ix.weights_source,
       responses: responseTimes(ix, state),
+    };
+  },
+
+  async packet(queryId: string): Promise<Packet> {
+    const [q, state] = await getQuery(queryId);
+    const ix = await index();
+    const s = current(q, state);
+    const o = outcomeOf(q, s);
+    if (!o || s.option == null) {
+      throw new Error(`query ${queryId} is '${s.status}'; a packet is made once the physician has answered`);
+    }
+    const { rules: allRules } = await fetchJson<{ rules: ClinicalRule[] }>("/demo/evaluation.json");
+    const rules = [q.condition, ...(q.kind === "unspecified_dx" || q.kind === "conflicting_dx" ? [q.kind] : [])]
+      .map((key) => allRules.find((r) => r.key === key))
+      .filter((r): r is ClinicalRule => r != null);
+    const row = ix.worklist.find((w) => w.query_id === queryId);
+    const stem = s.stem ?? q.stem;
+    const trail = state.audit
+      .filter((a) => a.query_id === queryId)
+      .map(({ ts, actor, action, detail }) => ({ ts, actor, action, detail }));
+    const sent = trail.find((t) => SENT_ACTIONS.includes(t.action));
+    const answered = trail.find((t) => t.action === "answered");
+    const check = lintQuery({ ...q, stem, targets: ix.lint_targets });
+    const weight = (drg: number) => ix.weights[String(drg)] ?? null;
+    return {
+      query_id: queryId,
+      encounter_id: q.encounter_id,
+      patient: { age: q.age, sex: q.sex, reason_for_admission: q.reason_for_admission, los_days: row?.los_days ?? 0 },
+      condition: q.condition,
+      condition_name: CONDITION_NAMES[q.condition] ?? q.condition,
+      alert: q.kind,
+      evidence: q.indicators,
+      rules,
+      query: { stem, options: q.options, drafter: q.drafter, standard: QUERY_STANDARD, rules_check: check },
+      approval: sent ? { by: sent.actor, at: sent.ts, edited: sent.action !== "approved_and_sent" } : null,
+      answer: { option: q.options[s.option], comment: s.comment ?? "", by: s.answered_by ?? null, at: answered?.ts },
+      addendum: o.addendum ? o.addendum + (s.comment ?? "") : null,
+      outcome: {
+        status: o.status,
+        drg_before: o.drg_before,
+        drg_after: o.drg_after,
+        weight_before: weight(o.drg_before),
+        weight_after: weight(o.drg_after),
+      },
+      trail,
     };
   },
 

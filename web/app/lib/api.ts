@@ -104,6 +104,42 @@ export interface AuditRow {
   detail: string;
 }
 
+export interface ClinicalRule {
+  key: string;
+  condition: string;
+  source: string;
+  rule: string;
+}
+
+export interface Packet {
+  query_id: string;
+  encounter_id: string;
+  patient: { age: number; sex: string; reason_for_admission: string; los_days: number };
+  condition: string;
+  condition_name: string;
+  alert: Kind;
+  evidence: string[];
+  rules: ClinicalRule[];
+  query: {
+    stem: string;
+    options: string[];
+    drafter: string;
+    standard: string;
+    rules_check: { ok: boolean; problems: string[] };
+  };
+  approval: { by: string; at?: string; edited: boolean } | null;
+  answer: { option: string | null; comment: string | null; by: string | null; at?: string | null };
+  addendum: string | null;
+  outcome: {
+    status: Status;
+    drg_before: number | null;
+    drg_after: number | null;
+    weight_before: number | null;
+    weight_after: number | null;
+  };
+  trail: { ts?: string; actor: string; action: string; detail: string }[];
+}
+
 export type UrStatus = "ok" | "observation_review" | "long_stay" | "explained_by_gap" | "no_benchmark";
 
 export interface UrRow {
@@ -183,6 +219,7 @@ const liveApi = {
     post<{ status: Status }>(`/api/queries/${queryId}/answer`, { option_index: optionIndex, comment }),
   simulate: (queryId: string) => post<{ status: Status }>(`/api/queries/${queryId}/simulate`),
   audit: () => call<AuditRow[]>("/api/audit"),
+  packet: (queryId: string) => call<Packet>(`/api/queries/${encodeURIComponent(queryId)}/packet`),
   ur: () => call<UrBoard>("/api/ur"),
   leadership: () => call<Leadership>("/api/leadership"),
   reset: () => post("/api/admin/reset"),

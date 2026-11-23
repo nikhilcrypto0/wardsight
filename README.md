@@ -47,6 +47,14 @@ Two tests keep the browser honest (`cd web && npm test`, also in CI):
 - working every query in the browser lands on exactly the engine's totals (statuses, open gaps, case
   mix, utilization review).
 
+## Audit-defense packet
+
+Every answered query has a one-page packet (`/packet/<query id>`, printable to PDF): the evidence values
+with their hours, the published rule they meet and its source, the exact question the physician saw, the
+compliant-query check re-run on that text, who approved it and when, the physician's answer and
+addendum, the billing category before and after, and the query's full audit trail. It is what an
+auditor or payer asks for when a query or a code is challenged.
+
 ## Reading real FHIR data (milestone 7, part 1)
 
 `wardsight-fhir` turns FHIR R4 (the format Epic exposes) back into a chart and runs the evidence rules.
@@ -113,8 +121,8 @@ Plain code, no AI, reading only what a hospital system would hold.
      (stated and later "resolved" is a change over time, not a conflict)
 
 Dev-set score with template notes: 95 of 95 planted gaps caught, 0 false alarms, including near-miss
-charts for each alert type. On AI-written notes (`uv run wardsight-llm-eval`, gpt-5.4-mini, the original
-200 dev charts, about $0.94): 75 of 75, 0 false alarms ([report](docs/eval/llm-notes-dev.md)). Those AI
+charts for each alert type. On AI-written notes (`uv run wardsight-llm-eval`, gpt-5.4-mini, all 234 dev
+charts, about $1.16 in total): 95 of 95, 0 false alarms ([report](docs/eval/llm-notes-dev.md)). Those AI
 notes still use set wording per diagnosis, so free-form shorthand is the next test; the held-out set is
 scored once, at the end.
 

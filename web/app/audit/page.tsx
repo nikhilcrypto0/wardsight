@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api, type AuditRow } from "../lib/api";
 
@@ -84,7 +85,15 @@ function AuditScreen() {
                 </td>
                 <td className="px-4 py-2.5">{r.actor}</td>
                 <td className="px-4 py-2.5 font-medium">{ACTION_LABEL[r.action] ?? r.action}</td>
-                <td className="px-4 py-2.5 font-mono text-xs">{r.query_id}</td>
+                <td className="px-4 py-2.5 font-mono text-xs">
+                  {r.action === "answered" ? (
+                    <Link href={`/packet/${r.query_id}`} className="text-teal-700 underline" title="Audit-defense packet">
+                      {r.query_id}
+                    </Link>
+                  ) : (
+                    r.query_id
+                  )}
+                </td>
                 <td className="px-4 py-2.5 text-slate-600 max-w-md truncate" title={r.detail}>
                   {r.detail}
                 </td>

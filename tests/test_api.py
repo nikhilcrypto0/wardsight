@@ -144,3 +144,20 @@ def test_reject_simulate_audit_and_reset(client):
     client.post("/api/admin/reset")
     assert client.get("/api/summary").json()["queries"] == {"pending_review": DEV_FLAGS}
     assert client.get("/api/audit").json()[0]["action"] == "reset"  # the log itself is never wiped
+
+
+def test_audit_packet_tells_the_whole_story(client):
+    q = first(client, "sepsis", "missing_dx")
+    assert client.get(f"/api/queries/{q['query_id']}/packet").status_code == 409  # not answered yet
+    client.post(f"/api/queries/{q['query_id']}/approve", json={})
+    client.post(f"/api/queries/{q['query_id']}/answer", json={"option_index": 0, "comment": "Agree."})
+    p = client.get(f"/api/queries/{q['query_id']}/packet").json()
+    assert p["encounter_id"] == q["encounter_id"] and p["alert"] == "missing_dx"
+    assert p["evidence"] and "Sepsis-3" in p["rules"][0]["source"]
+    assert p["query"]["rules_check"] == {"ok": True, "problems": []}
+    assert p["approval"]["by"] == "CDI reviewer" and p["approval"]["edited"] is False
+    assert p["answer"]["option"] == "Sepsis" and p["answer"]["by"] == "Attending physician"
+    assert p["addendum"].startswith("ADDENDUM") and "sepsis" in p["addendum"]
+    assert p["outcome"]["status"] == "resolved" and p["outcome"]["drg_before"] != p["outcome"]["drg_after"]
+    assert [t["action"] for t in p["trail"]] == ["approved_and_sent", "answered", "flag_resolved"]
+    assert client.get("/api/queries/nope/packet").status_code == 404
