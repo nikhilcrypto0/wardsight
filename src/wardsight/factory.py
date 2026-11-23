@@ -23,7 +23,7 @@ DEFAULT_SEED = 7
 def run(out: Path, seed: int, synthea_dir: Path | None) -> dict[str, Counter]:
     sizes = {split: sum(c.values()) for split, c in GROUP_COUNTS.items()}
     total = sum(sizes.values())
-    extra = sum(EXTRA_COUNTS.values())
+    extra = sum(sum(c.values()) for c in EXTRA_COUNTS.values())
     patients = (synthea_patients(synthea_dir, total + extra) if synthea_dir
                 else builtin_patients(total + extra, seed))
 
@@ -34,9 +34,12 @@ def run(out: Path, seed: int, synthea_dir: Path | None) -> dict[str, Counter]:
         answers += ans
         start += size
     # U3 charts come last, from patients after the held-out slice, so the originals never shift
-    enc, ans = build_extra(patients[start:start + extra], seed)
-    encounters += enc
-    answers += ans
+    for split, counts in EXTRA_COUNTS.items():  # dev batch first, then held-out: originals never shift
+        size = sum(counts.values())
+        enc, ans = build_extra(split, patients[start:start + size], seed)
+        encounters += enc
+        answers += ans
+        start += size
 
     write_db(out / "wardsight.duckdb", encounters, answers)
     write_bundles(out / "fhir", encounters)

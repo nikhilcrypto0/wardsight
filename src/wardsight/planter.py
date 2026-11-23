@@ -45,8 +45,13 @@ GROUP_EVIDENCE = {"missing": EVIDENCE_MEETS, "unsupported": EVIDENCE_ABSENT,
 # "not fully specified" and "conflicting documentation". They come from their own random
 # stream and from patients after the held-out slice, so the original 200 dev and 100
 # held-out charts are unchanged. Encounter ids continue from D0201.
-EXTRA_COUNTS = {"unspecified": 10, "unspecified_near": 6, "conflicting": 10, "conflict_near": 8}
-EXTRA_START = 201
+# Held-out batch added 2026-11-23 (H1) so the final exam also tests both alert types. It is
+# generated only: no rule is run on it or tuned against it before the one final scoring.
+EXTRA_COUNTS = {
+    "dev": {"unspecified": 10, "unspecified_near": 6, "conflicting": 10, "conflict_near": 8},
+    "heldout": {"unspecified": 5, "unspecified_near": 3, "conflicting": 5, "conflict_near": 4},
+}
+EXTRA_START = {"dev": 201, "heldout": 101}
 VAGUE = {"abla": ("D64.9", "anemia"), "hf": ("I50.9", "CHF")}  # what a vague note says instead
 CONFLICT_CONDITIONS = ("aki", "sepsis", "hyponatremia", "abla", "arf")
 CONFLICT_NEGATIONS = {"aki": "acute kidney injury ruled out", "sepsis": "no evidence of sepsis",
@@ -111,24 +116,24 @@ def build_split(split: str, patients: list[PatientSeed], seed: int) -> tuple[lis
     return encounters, answers
 
 
-def plan_extra_slots(rng: random.Random) -> list[tuple[str, str]]:
+def plan_extra_slots(rng: random.Random, split: str) -> list[tuple[str, str]]:
     slots = []
-    for group, count in EXTRA_COUNTS.items():
+    for group, count in EXTRA_COUNTS[split].items():
         pool = tuple(VAGUE) if group.startswith("unspecified") else CONFLICT_CONDITIONS
         slots += [(group, pool[i % len(pool)]) for i in range(count)]
     rng.shuffle(slots)
     return slots
 
 
-def build_extra(patients: list[PatientSeed], seed: int) -> tuple[list[Encounter], list[AnswerKeyRow]]:
-    """The U3 dev charts (D0201+)."""
-    rng = random.Random(f"{seed}-dev-u3")
-    slots = plan_extra_slots(rng)
+def build_extra(split: str, patients: list[PatientSeed], seed: int) -> tuple[list[Encounter], list[AnswerKeyRow]]:
+    """The U3 charts for one split (D0201+, H0101+), each from its own random stream."""
+    rng = random.Random(f"{seed}-{split}-u3")
+    slots = plan_extra_slots(rng, split)
     if len(patients) < len(slots):
         raise ValueError(f"U3 charts need {len(slots)} patients, got {len(patients)}")
     encounters, answers = [], []
-    for i, ((group, condition), patient) in enumerate(zip(slots, patients), start=EXTRA_START):
-        enc, ans = _build_one(rng, "dev", f"D{i:04d}", group, condition, patient)
+    for i, ((group, condition), patient) in enumerate(zip(slots, patients), start=EXTRA_START[split]):
+        enc, ans = _build_one(rng, split, f"{split[0].upper()}{i:04d}", group, condition, patient)
         encounters.append(enc)
         answers.append(ans)
     return encounters, answers

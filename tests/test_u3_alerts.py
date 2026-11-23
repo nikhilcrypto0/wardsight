@@ -86,13 +86,13 @@ def test_new_alerts_get_compliant_queries(ward: Path):
                 result = lint_query(template_stem(req), req.options, req.indicators, f.condition, f.kind)
                 assert result.ok, (chart.encounter_id, result.problems)
                 drafted += 1
-    assert drafted == planter.EXTRA_COUNTS["unspecified"] + planter.EXTRA_COUNTS["conflicting"] + \
+    assert drafted == planter.EXTRA_COUNTS["dev"]["unspecified"] + planter.EXTRA_COUNTS["dev"]["conflicting"] + \
         sum(1 for g in _flags_by_group(ward)["missing"] if g == ["unspecified_dx"])
 
 
 def _snapshot(db: Path) -> dict[str, list]:
     """Every row that describes the original charts (ids below D0201 and all held-out)."""
-    original = "encounter_id < 'D0201' OR encounter_id LIKE 'H%'"
+    original = "encounter_id < 'D0201' OR (encounter_id LIKE 'H%' AND encounter_id < 'H0101')"
     with duckdb.connect(str(db), read_only=True) as con:
         return {table: con.execute(f"SELECT * FROM {table} WHERE {original} ORDER BY ALL").fetchall()
                 for table in ("ehr.encounters", "ehr.events", "truth.scenarios")}
@@ -103,7 +103,32 @@ def test_adding_u3_charts_changed_no_original_chart(tmp_path: Path, monkeypatch:
     with_u3.mkdir()
     without_u3.mkdir()
     build_ward(with_u3, seed=11, synthea_dir=None)
-    monkeypatch.setattr(planter, "EXTRA_COUNTS", {})
-    monkeypatch.setattr("wardsight.factory.EXTRA_COUNTS", {})
+    monkeypatch.setattr(planter, "EXTRA_COUNTS", {"dev": {}, "heldout": {}})
+    monkeypatch.setattr("wardsight.factory.EXTRA_COUNTS", {"dev": {}, "heldout": {}})
     build_ward(without_u3, seed=11, synthea_dir=None)
     assert _snapshot(with_u3 / "wardsight.duckdb") == _snapshot(without_u3 / "wardsight.duckdb")
+
+
+def _snapshot_except_heldout_batch(db: Path) -> dict[str, list]:
+    """Every row for the charts that existed before the held-out U3 batch (H0101+)."""
+    before = "NOT (encounter_id LIKE 'H%' AND encounter_id >= 'H0101')"
+    with duckdb.connect(str(db), read_only=True) as con:
+        return {table: con.execute(f"SELECT * FROM {table} WHERE {before} ORDER BY ALL").fetchall()
+                for table in ("ehr.encounters", "ehr.events", "truth.scenarios", "truth.answer_key")}
+
+
+def test_heldout_batch_changed_no_existing_chart(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    with_batch, without_batch = tmp_path / "with", tmp_path / "without"
+    with_batch.mkdir()
+    without_batch.mkdir()
+    build_ward(with_batch, seed=11, synthea_dir=None)
+    counts = {"dev": planter.EXTRA_COUNTS["dev"], "heldout": {}}
+    monkeypatch.setattr(planter, "EXTRA_COUNTS", counts)
+    monkeypatch.setattr("wardsight.factory.EXTRA_COUNTS", counts)
+    build_ward(without_batch, seed=11, synthea_dir=None)
+    assert _snapshot_except_heldout_batch(with_batch / "wardsight.duckdb") == \
+        _snapshot_except_heldout_batch(without_batch / "wardsight.duckdb")
+    with duckdb.connect(str(with_batch / "wardsight.duckdb"), read_only=True) as con:
+        kinds = dict(con.execute("SELECT expected_flag, count(*) FROM truth.answer_key "
+                                 "WHERE encounter_id >= 'H0101' AND split = 'heldout' GROUP BY 1").fetchall())
+    assert kinds == {"unspecified_dx": 5, "conflicting_dx": 5, "none": 7}  # the final exam now covers both alerts

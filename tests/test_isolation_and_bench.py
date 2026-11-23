@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import ast
+import shutil
 from pathlib import Path
 
 import duckdb
 import pytest
 from counts import DEV_FLAGS
 
-from wardsight.bench import run
+from wardsight.bench import check_seal, run, seal_heldout
 from wardsight.engine.scan import scan
 from wardsight.factory import run as build_ward
 from wardsight.notes.template import write_template_notes
@@ -57,10 +58,28 @@ def test_every_dev_flag_gets_a_compliant_query(ward: Path):
     assert statuses == {"pending_review"}
 
 
-def test_heldout_is_scored_once(ward: Path):
+def test_heldout_is_scored_once(ward: Path, tmp_path: Path):
+    seal = tmp_path / "heldout.seal.json"
     with duckdb.connect(str(ward)) as con:
+        seal_heldout(con, seal)
         with pytest.raises(SystemExit, match="--final"):
-            run(con, "heldout", final=False)
-        run(con, "heldout", final=True)
+            run(con, "heldout", final=False, seal=seal)
+        run(con, "heldout", final=True, seal=seal)
         with pytest.raises(SystemExit, match="already scored"):
-            run(con, "heldout", final=True)
+            run(con, "heldout", final=True, seal=seal)
+
+
+def test_final_exam_refuses_unsealed_or_changed_heldout(ward: Path, tmp_path: Path):
+    seal, copy = tmp_path / "heldout.seal.json", tmp_path / "ward.duckdb"
+    shutil.copy(ward, copy)  # the shared fixture is not modified
+    with duckdb.connect(str(copy)) as con:
+        with pytest.raises(SystemExit, match="not sealed"):
+            check_seal(con, seal)
+        seal_heldout(con, seal)
+        check_seal(con, seal)                              # untouched: passes
+        with pytest.raises(SystemExit, match="already exists"):
+            seal_heldout(con, seal)                        # a seal is never silently overwritten
+        con.execute("UPDATE truth.answer_key SET expected_flag = 'none' "
+                    "WHERE encounter_id = (SELECT min(encounter_id) FROM truth.answer_key WHERE split = 'heldout')")
+        with pytest.raises(SystemExit, match="changed since they were sealed"):
+            run(con, "heldout", final=True, seal=seal)

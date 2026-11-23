@@ -162,8 +162,13 @@ complication like acute kidney injury raises severity there without moving the D
 | Near-miss (just below criteria) | 30 | 15 | stays quiet |
 | Confounder (CKD baseline creatinine) | 15 | 8 | stays quiet |
 | Routine admission | 40 | 20 | stays quiet |
+| Not fully specified (vague "CHF", "anemia") | 10 (+8 vague HF above) | 5 (+4) | flags it |
+| Vague term, evidence not specific | 6 | 3 | stays quiet |
+| Conflicting notes | 10 | 5 | flags it |
+| Stated, then resolved (not a conflict) | 8 | 4 | stays quiet |
 
-The held-out set is run once, at the end, for the published numbers. Detection rules are written
+The held-out set is run once, at the end, for the published numbers. Its charts and answer key are
+sealed in `heldout.seal.json`; the final run refuses if they changed. No rule has been run on it. Detection rules are written
 separately from the generator so the test does not grade its own homework.
 
 ## Run it

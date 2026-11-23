@@ -3,7 +3,7 @@
 > Last verified: 2026-11-23
 
 AI command center for hospital clinical documentation integrity (CDI), running on a fully
-synthetic hospital: 234 development + 100 held-out stays, replayed on a 67-bed unit. Plain code
+synthetic hospital: 234 development + 117 held-out stays, replayed on a 67-bed unit. Plain code
 makes clinical calls, an LLM only drafts wording, a human approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntUk1Y17AmzHjPfSfuaP
 
 ## Commands
@@ -20,7 +20,8 @@ makes clinical calls, an LLM only drafts wording, a human approves anything that
   `docs/eval/llm-notes-dev.md`. Needs `.env`; resumes without paying twice; never touches held-out
 - `uv run wardsight-scan --split dev` — run the detection engine, flags into `ops.flags`
 - `uv run wardsight-bench --split dev` — score flags against the answer key
-- `uv run wardsight-bench --split heldout --final` — ONCE, at the very end; a rerun is refused
+- `uv run wardsight-bench --split heldout --final` — ONCE, at the very end; a rerun is refused, and it
+  refuses if the held-out charts or answer key differ from `heldout.seal.json` (sealed 2026-11-23)
 - `uv run wardsight-queries --split dev [--llm --limit 3]` — draft physician queries into `ops.queries`
 - `uv run wardsight-api` — HTTP API on :8000 (dev split only)
 - `uv run wardsight-replay` — rebuild `web/public/replay.json` (the replay screen's data)

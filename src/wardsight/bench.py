@@ -11,6 +11,8 @@ published numbers cannot be tuned against it.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime
@@ -86,10 +88,44 @@ def mistakes(con: duckdb.DuckDBPyConnection, split: str) -> list[dict]:
     return found
 
 
-def run(con: duckdb.DuckDBPyConnection, split: str, final: bool) -> Score:
+SEAL = Path(__file__).resolve().parents[2] / "heldout.seal.json"
+# What the final exam is: the held-out charts and their answer key. Notes are excluded on purpose,
+# because they are written later (template or AI) from these same charts.
+SEALED_TABLES = ("ehr.encounters", "ehr.events", "truth.scenarios", "truth.answer_key")
+
+
+def heldout_fingerprint(con: duckdb.DuckDBPyConnection) -> dict:
+    prints = {}
+    for table in SEALED_TABLES:
+        rows = con.execute(f"""SELECT * FROM {table} WHERE encounter_id IN
+                                   (SELECT encounter_id FROM ehr.encounters WHERE split = 'heldout')
+                               ORDER BY ALL""").fetchall()
+        prints[table] = {"rows": len(rows), "sha256": hashlib.sha256(repr(rows).encode()).hexdigest()}
+    return prints
+
+
+def seal_heldout(con: duckdb.DuckDBPyConnection, seal: Path = SEAL) -> dict:
+    """Pin the final exam. Refuses to overwrite: changing a seal must be a visible act in git."""
+    if seal.exists():
+        raise SystemExit(f"{seal.name} already exists. The held-out set is sealed; delete the file in a "
+                         "reviewed commit only if the exam itself has to change.")
+    prints = heldout_fingerprint(con)
+    seal.write_text(json.dumps({"sealed": datetime.now().date().isoformat(), "tables": prints}, indent=1) + "\n")
+    return prints
+
+
+def check_seal(con: duckdb.DuckDBPyConnection, seal: Path = SEAL) -> None:
+    if not seal.exists():
+        raise SystemExit("The held-out set is not sealed. Run `wardsight-bench --seal-heldout` first.")
+    if json.loads(seal.read_text())["tables"] != heldout_fingerprint(con):
+        raise SystemExit("The held-out charts or answer key changed since they were sealed. Not scoring.")
+
+
+def run(con: duckdb.DuckDBPyConnection, split: str, final: bool, seal: Path = SEAL) -> Score:
     if split == "heldout":
         if not final:
             raise SystemExit("The held-out split is scored once, at the end. Pass --final to do it.")
+        check_seal(con, seal)
         con.execute(HELDOUT_DDL)
         if con.execute("SELECT count(*) FROM ops.heldout_runs").fetchone()[0]:
             raise SystemExit("The held-out split was already scored. Its numbers are final.")
@@ -113,9 +149,14 @@ def main() -> None:
     parser.add_argument("--db", type=Path, default=Path("data/wardsight.duckdb"))
     parser.add_argument("--split", default="dev", choices=("dev", "heldout"))
     parser.add_argument("--final", action="store_true", help="required to score the held-out split")
+    parser.add_argument("--seal-heldout", action="store_true",
+                        help="pin the held-out charts and answer key (does not score anything)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     with duckdb.connect(str(args.db)) as con:
+        if args.seal_heldout:
+            log.info("sealed: %s", {t: v["rows"] for t, v in seal_heldout(con).items()})
+            return
         log.info(report(run(con, args.split, args.final)))
 
 

@@ -23,7 +23,7 @@ cd web && WARDSIGHT_RECORDING=1 npm run dev   # terminal 2 (hides the dev badge)
 | 2:05 | Chart D0011 | Scroll to the billing card | "Resolved. Billing category 690 to 872. The record is now accurate." |
 | 2:15 | Ward replay, end | Point at "Billing categories corrected" and an "unsupported" feed line | "It also works the other way: diagnoses written without evidence get ruled out, and the bill goes down. This is about accuracy, not padding." |
 | 2:30 | Audit log | Scroll | "Every decision is logged and the log is append-only. Nothing reaches a physician without a human click." |
-| 2:40 | README on GitHub | Scroll to the test table | "Synthetic data only. 300 charts with planted mistakes and an answer key, 100 held out. Python, FHIR, DuckDB to Snowflake, React. Link below." |
+| 2:40 | README on GitHub | Scroll to the test table | "Synthetic data only. 351 charts with planted mistakes and an answer key, 117 held out. Python, FHIR, DuckDB to Snowflake, React. Link below." |
 | 2:55 | End | | "Thanks for watching." |
 
 Keep it under 3:00. Re-record any segment rather than cutting mid-sentence.

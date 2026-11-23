@@ -1,0 +1,21 @@
+{
+ "sealed": "2026-11-23",
+ "tables": {
+  "ehr.encounters": {
+   "rows": 117,
+   "sha256": "9bf7757d8785d8af09b9f7c3e847f3987d641f33ea6f5f4fda3df53132948133"
+  },
+  "ehr.events": {
+   "rows": 22989,
+   "sha256": "98d299b735d6c7840efed0a59fee4c8132ccbba450b6bfb2c31be5845a923721"
+  },
+  "truth.scenarios": {
+   "rows": 117,
+   "sha256": "b1577fb19fd1dae3266fb92d9293d8e09432690b3e049b6aed58794e0b28e137"
+  },
+  "truth.answer_key": {
+   "rows": 117,
+   "sha256": "5ae1d627cbaa544bcb2e987d27794f941b2b86b479462e13a758a2ee53d6e7c5"
+  }
+ }
+}
