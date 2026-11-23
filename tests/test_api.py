@@ -45,6 +45,11 @@ def test_worklist_and_summary(client):
     rows = client.get("/api/worklist").json()
     assert len(rows) == 75 and {r["status"] for r in rows} == {"pending_review"}
     assert client.get("/api/summary").json()["queries"] == {"pending_review": 75}
+    for r in rows:  # every open gap carries a priority that is exactly the sum of its shown parts
+        assert 0 <= r["priority"] <= 100
+        assert r["priority"] == sum(p["points"] for p in r["priority_parts"])
+    kinds = {r["kind"] for r in rows if r["priority"] >= 50}
+    assert kinds == {"missing_dx", "unsupported_dx"}  # unsupported diagnoses rank high too
 
 
 def test_heldout_charts_are_never_served(client):
@@ -65,6 +70,8 @@ def test_confirmed_missing_dx_resolves_and_moves_drg(client):
     assert any(n["type"] == "addendum" for n in chart["notes"])
     answered = next(x for x in chart["queries"] if x["query_id"] == q["query_id"])
     assert answered["drg_before"] != answered["drg_after"]
+    row = next(r for r in client.get("/api/worklist").json() if r["query_id"] == q["query_id"])
+    assert row["priority"] is None  # a closed gap drops out of the ranking
 
 
 def test_ruled_out_unsupported_dx_resolves(client):

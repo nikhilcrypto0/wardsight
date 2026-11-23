@@ -42,8 +42,12 @@ function WorklistPage() {
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "Could not load the worklist"));
   }, []);
 
+  // Highest priority first; closed gaps (no priority) sink to the bottom.
   const shown = useMemo(
-    () => (rows ?? []).filter((r) => filter === "all" || r.status === filter),
+    () =>
+      (rows ?? [])
+        .filter((r) => filter === "all" || r.status === filter)
+        .toSorted((a, b) => (b.priority ?? -1) - (a.priority ?? -1) || a.encounter_id.localeCompare(b.encounter_id)),
     [rows, filter],
   );
 
@@ -65,7 +69,8 @@ function WorklistPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Clinical documentation worklist</h1>
         <p className="mt-1 text-sm text-slate-500">
           {summary.charts} admitted patients scanned. Each row is a gap between what the chart shows and what the
-          notes say, with a draft physician query waiting for review.
+          notes say, with a draft physician query waiting for review. Sorted by priority: billing impact,
+          complication level and time left before the expected discharge.
         </p>
       </section>
 
@@ -95,6 +100,7 @@ function WorklistPage() {
         <table className="w-full min-w-[720px] text-sm">
           <thead className="text-left text-xs uppercase tracking-wide text-slate-500 bg-slate-50">
             <tr>
+              <th className="px-4 py-2.5 font-medium">Priority (impact)</th>
               <th className="px-4 py-2.5 font-medium">Patient</th>
               <th className="px-4 py-2.5 font-medium">Admitted for</th>
               <th className="px-4 py-2.5 font-medium">Condition</th>
@@ -106,6 +112,9 @@ function WorklistPage() {
           <tbody className="divide-y divide-slate-100">
             {shown.map((r) => (
               <tr key={r.query_id} className="hover:bg-slate-50">
+                <td className="px-4 py-3">
+                  <PriorityCell row={r} />
+                </td>
                 <td className="px-4 py-3">
                   <Link href={`/encounters/${r.encounter_id}`} className="font-mono text-blue-700 hover:underline">
                     {r.encounter_id}
@@ -175,5 +184,36 @@ function DemoIntro() {
         time from the audit log.
       </p>
     </section>
+  );
+}
+
+const SHORT: Record<string, string> = {
+  "Billing impact": "Billing",
+  "Complication level": "CC/MCC",
+  "Time pressure": "Time",
+};
+
+/** The score and the parts it is made of, so a reviewer can see why a case is on top. */
+function PriorityCell({ row }: { row: WorklistRow }) {
+  if (row.priority == null || !row.priority_parts) return <span className="text-slate-400">closed</span>;
+  // Both directions rank the same way: an unsupported diagnosis is a compliance risk, not a missed sale.
+  const up = row.kind === "missing_dx";
+  const tone = row.priority >= 60 ? "bg-rose-600" : row.priority >= 35 ? "bg-amber-500" : "bg-slate-400";
+  return (
+    <div title={row.priority_parts.map((p) => `${p.label}: +${p.points} (${p.why})`).join("\n")}>
+      <div className="flex items-center gap-2">
+        <span className={`inline-block h-2 w-2 rounded-full ${tone}`} />
+        <span className="font-mono text-base font-medium">{row.priority}</span>
+      </div>
+      <div className={`mt-0.5 text-[11px] font-medium whitespace-nowrap ${up ? "text-teal-700" : "text-rose-700"}`}>
+        {up ? "Corrects up: missing diagnosis" : "Corrects down: unsupported diagnosis"}
+      </div>
+      <div className="text-[11px] text-slate-500 whitespace-nowrap">
+        {row.priority_parts
+          .filter((p) => p.points > 0)
+          .map((p) => `${SHORT[p.label] ?? p.label} +${p.points}`)
+          .join(" · ")}
+      </div>
+    </div>
   );
 }

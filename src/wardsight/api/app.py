@@ -19,6 +19,7 @@ from wardsight.api import reports
 from wardsight.engine.chart import load_charts
 from wardsight.engine.drg import coded_diagnoses, group
 from wardsight.queries.lint import lint_query
+from wardsight.queries.priority import priority
 from wardsight.workflow import actions
 
 SPLIT = "dev"
@@ -56,9 +57,10 @@ def rows(con: duckdb.DuckDBPyConnection, sql: str, params: list | None = None) -
 
 
 def worklist_rows(con: duckdb.DuckDBPyConnection) -> list[dict]:
-    return rows(con, """
+    """Every query with its gap, plus a 0-100 priority (queries/priority.py) while the gap is open."""
+    found = rows(con, """
         SELECT q.query_id, q.encounter_id, q.condition, q.kind, q.status, q.updated_ts,
-               e.reason_for_admission, p.age, p.sex,
+               e.reason_for_admission, e.los_days, p.age, p.sex,
                f.drg_now, f.severity_now, f.drg_if_resolved, f.severity_if_resolved,
                q.drg_before, q.drg_after, q.answer
         FROM ops.queries q
@@ -66,6 +68,15 @@ def worklist_rows(con: duckdb.DuckDBPyConnection) -> list[dict]:
         LEFT JOIN ops.flags f ON f.encounter_id = q.encounter_id AND f.condition = q.condition
                               AND f.kind = q.kind
         WHERE q.split = ? ORDER BY q.encounter_id, q.condition""", [SPLIT])
+    for row in found:
+        if row["drg_now"] is None:  # the gap is closed: nothing left to prioritise
+            row["priority"], row["priority_parts"] = None, None
+            continue
+        p = priority(row["drg_now"], row["drg_if_resolved"], row["severity_now"], row["severity_if_resolved"],
+                     row["los_days"])
+        row["priority"] = p.score
+        row["priority_parts"] = [{"label": x.label, "points": x.points, "why": x.why} for x in p.parts]
+    return found
 
 
 def encounter_payload(con: duckdb.DuckDBPyConnection, encounter_id: str) -> dict | None:

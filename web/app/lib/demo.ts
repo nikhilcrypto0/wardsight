@@ -229,6 +229,8 @@ export const demoApi: Api = {
         drg_before: o ? o.drg_before : null,
         drg_after: o ? o.drg_after : null,
         answer: o && s.option != null ? q.options[s.option] : null,
+        priority: resolved ? null : row.priority,
+        priority_parts: resolved ? null : row.priority_parts,
       };
     });
   },

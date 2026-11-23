@@ -7,6 +7,12 @@ import { IS_PUBLIC } from "./mode";
 export type Kind = "missing_dx" | "unsupported_dx";
 export type Status = "pending_review" | "needs_rewrite" | "rejected" | "sent" | "answered" | "resolved";
 
+export interface PriorityPart {
+  label: string;
+  points: number;
+  why: string;
+}
+
 export interface WorklistRow {
   query_id: string;
   encounter_id: string;
@@ -23,6 +29,10 @@ export interface WorklistRow {
   drg_before: number | null;
   drg_after: number | null;
   answer: string | null;
+  los_days: number;
+  /** 0-100, how urgently a reviewer should work this gap; null once the gap is closed */
+  priority: number | null;
+  priority_parts: PriorityPart[] | null;
 }
 
 export interface Summary {
