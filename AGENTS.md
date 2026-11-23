@@ -1,10 +1,10 @@
 # WardSight — Agent Instructions
 
-> Last verified: 2026-11-08
+> Last verified: 2026-11-23
 
 AI command center for hospital clinical documentation integrity (CDI), running on a fully
-synthetic 40-bed ward. Plain code makes clinical calls, an LLM only drafts wording, a human
-approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntUk1Y17AmzHjPfSfuaP
+synthetic hospital: 200 development + 100 held-out stays, replayed on a 56-bed unit. Plain code
+makes clinical calls, an LLM only drafts wording, a human approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntUk1Y17AmzHjPfSfuaP
 
 ## Commands
 
@@ -15,6 +15,9 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `./scripts/get_synthea.sh` then `uv run wardsight-factory --synthea data/synthea/fhir` — Synthea patients
 - `uv run wardsight-notes --limit 3` — LLM-written notes, small paid smoke test (needs `.env`)
 - `uv run wardsight-notes --template` — plain template notes for every chart (offline, free)
+- `uv run wardsight-llm-eval [--limit 5]` — AI-written notes for the dev ward on a copy
+  (`data/wardsight-llm.duckdb`), rescan, score vs the template baseline; report in
+  `docs/eval/llm-notes-dev.md`. Needs `.env`; resumes without paying twice; never touches held-out
 - `uv run wardsight-scan --split dev` — run the detection engine, flags into `ops.flags`
 - `uv run wardsight-bench --split dev` — score flags against the answer key
 - `uv run wardsight-bench --split heldout --final` — ONCE, at the very end; a rerun is refused
@@ -49,7 +52,8 @@ approves anything that leaves the system. Plan: https://claude.ai/artifact/XVntU
 - `store.py` — DuckDB (`ehr`, `truth`, `ops` schemas); `fhir_export.py` — FHIR R4 bundles
 - `notes/` — LLM note writer with leak check and budget ledger; `template.py` offline stand-in
 - `engine/` — `evidence.py` rules, `documentation.py` note reader, `gaps.py` flags, `drg.py` MS-DRG v44
-- `bench.py` — scorer (reads `truth`); held-out scored once
+- `bench.py` — scorer (reads `truth`); held-out scored once; `mistakes()` lists every wrong chart
+- `llm_eval.py` — the one-command AI-notes test (dev only, on a copy)
 - `queries/` — `options.py` code-chosen answers, `lint.py` compliance gate, `draft.py` template +
   OpenAI drafters with retry, `run.py` review queue. The AI writes only the question stem.
 - `workflow/` — `actions.py` review/send/answer/addendum/rescan + `ops.audit`; `physician.py` simulated physician

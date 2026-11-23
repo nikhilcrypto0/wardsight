@@ -12,18 +12,17 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 from collections.abc import Callable
 from datetime import timedelta
 from pathlib import Path
 
 import duckdb
-from dotenv import load_dotenv
 
 from wardsight.notes.budget import BudgetExceeded, Ledger, load_budget
 from wardsight.notes.spec import SYSTEM_PROMPT, NoteSet, check_notes, user_prompt
 from wardsight.notes.template import NOTES_DDL, write_template_notes
 from wardsight.reload import load_encounters
+from wardsight.settings import check_model, openai_model
 
 log = logging.getLogger("wardsight.notes")
 
@@ -45,7 +44,8 @@ def openai_generate(model: str, max_output_tokens: int) -> Generate:
     return call
 
 
-def write_notes(db: Path, config: Path, generate: Generate, model: str, limit: int | None) -> dict[str, int]:
+def write_notes(db: Path, config: Path, generate: Generate, model: str, limit: int | None,
+                split: str | None = None) -> dict[str, int]:
     budget = load_budget(config)
     stats = {"written": 0, "failed": 0}
     with duckdb.connect(str(db)) as con:
@@ -53,7 +53,8 @@ def write_notes(db: Path, config: Path, generate: Generate, model: str, limit: i
         ledger = Ledger(con, budget, "notes")
         done = {r[0] for r in con.execute(
             "SELECT DISTINCT encounter_id FROM ehr.notes WHERE source = 'llm'").fetchall()}
-        todo = [e for e in load_encounters(con) if e.encounter_id not in done][:limit]
+        todo = [e for e in load_encounters(con)
+                if e.encounter_id not in done and (split is None or e.split == split)][:limit]
         log.info("%d charts need notes", len(todo))
         try:
             for enc in todo:
@@ -99,6 +100,7 @@ def main() -> None:
     parser.add_argument("--db", type=Path, default=Path("data/wardsight.duckdb"))
     parser.add_argument("--config", type=Path, default=Path("wardsight.toml"))
     parser.add_argument("--limit", type=int, default=None, help="only this many charts (smoke test)")
+    parser.add_argument("--split", choices=("dev", "heldout"), default=None, help="only this split")
     parser.add_argument("--template", action="store_true",
                         help="write plain template notes for every chart (no API, no cost)")
     args = parser.parse_args()
@@ -108,13 +110,11 @@ def main() -> None:
             count = write_template_notes(con, load_encounters(con), seed=0)
         log.info("template notes written for %d charts", count)
         return
-    load_dotenv()
-    model = os.environ.get("WARDSIGHT_OPENAI_MODEL")
-    if not os.environ.get("OPENAI_API_KEY") or not model:
-        raise SystemExit("Set OPENAI_API_KEY and WARDSIGHT_OPENAI_MODEL in .env (see .env.example).")
+    model = openai_model()
+    check_model(model)
     budget = load_budget(args.config)
     write_notes(args.db, args.config, openai_generate(model, budget.max_output_tokens_per_call),
-                model, args.limit)
+                model, args.limit, args.split)
 
 
 if __name__ == "__main__":

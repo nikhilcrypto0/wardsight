@@ -43,13 +43,17 @@ class Score:
         return 100 * self.false_alarms / self.quiet_charts if self.quiet_charts else 0.0
 
 
-def score(con: duckdb.DuckDBPyConnection, split: str) -> Score:
-    rows = con.execute("""
+def _rows(con: duckdb.DuckDBPyConnection, split: str) -> list[tuple]:
+    return con.execute("""
         SELECT a.encounter_id, a.grp, a.condition, a.expected_flag,
                list(f.condition || ':' || f.kind) FILTER (WHERE f.kind IS NOT NULL) AS raised
         FROM truth.answer_key a
         LEFT JOIN ops.flags f ON f.encounter_id = a.encounter_id AND f.split = a.split
-        WHERE a.split = ? GROUP BY ALL""", [split]).fetchall()
+        WHERE a.split = ? GROUP BY ALL ORDER BY a.encounter_id""", [split]).fetchall()
+
+
+def score(con: duckdb.DuckDBPyConnection, split: str) -> Score:
+    rows = _rows(con, split)
     planted = caught = false_alarms = quiet = 0
     groups: dict[str, list[int]] = {}
     for _, grp, condition, expected, raised in rows:
@@ -66,6 +70,20 @@ def score(con: duckdb.DuckDBPyConnection, split: str) -> Score:
         g[2] += len(raised)
     return Score(split, planted, caught, false_alarms, quiet,
                  tuple((k, *v) for k, v in sorted(groups.items())))
+
+
+def mistakes(con: duckdb.DuckDBPyConnection, split: str) -> list[dict]:
+    """Every chart the engine got wrong: a planted gap it missed, or a flag it should not have raised."""
+    found = []
+    for encounter_id, grp, condition, expected, raised in _rows(con, split):
+        raised = raised or []
+        want = f"{condition}:{expected}" if expected != "none" else None
+        missed = want is not None and want not in raised
+        extra = [r for r in raised if r != want]
+        if missed or extra:
+            found.append({"encounter_id": encounter_id, "group": grp, "condition": condition,
+                          "expected": expected, "missed": missed, "extra": extra})
+    return found
 
 
 def run(con: duckdb.DuckDBPyConnection, split: str, final: bool) -> Score:

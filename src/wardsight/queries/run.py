@@ -12,13 +12,11 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
 import duckdb
-from dotenv import load_dotenv
 
 from wardsight.notes.budget import BudgetExceeded, Ledger, load_budget
 from wardsight.queries.draft import (
@@ -29,6 +27,7 @@ from wardsight.queries.draft import (
     openai_drafter,
     template_drafter,
 )
+from wardsight.settings import check_model, openai_model
 
 log = logging.getLogger("wardsight.queries")
 
@@ -99,10 +98,8 @@ def main() -> None:
         if not args.llm:
             draft_all(con, args.split, template_drafter, "template", 1, limit=args.limit)
             return
-        load_dotenv()
-        model = os.environ.get("WARDSIGHT_OPENAI_MODEL")
-        if not os.environ.get("OPENAI_API_KEY") or not model:
-            raise SystemExit("Set OPENAI_API_KEY and WARDSIGHT_OPENAI_MODEL in .env (see .env.example).")
+        model = openai_model()
+        check_model(model)
         ledger = Ledger(con, budget, "queries")
         draft_all(con, args.split, openai_drafter(model, budget.max_output_tokens_per_call), "openai",
                   budget.max_attempts_per_item, ledger, model, args.limit)
