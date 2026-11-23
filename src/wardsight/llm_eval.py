@@ -28,11 +28,14 @@ import duckdb
 from wardsight.bench import Score, mistakes, score
 from wardsight.engine.chart import load_charts
 from wardsight.engine.documentation import find_mentions
+from wardsight.engine.gaps import VAGUE_CODE
 from wardsight.engine.scan import scan
 from wardsight.notes.budget import load_budget
+from wardsight.notes.spec import Note, NoteSet, check_notes
 from wardsight.notes.template import NOTES_DDL
 from wardsight.notes.writer import Generate, openai_generate, write_notes
 from wardsight.queries.lint import TARGET_CODE
+from wardsight.reload import load_encounters
 from wardsight.settings import check_model, openai_model
 
 log = logging.getLogger("wardsight.llm_eval")
@@ -43,8 +46,11 @@ CONDITION = {"aki": "acute kidney injury", "sepsis": "sepsis", "hyponatremia": "
              "hf": "acute systolic heart failure"}
 GROUP = {"missing": "missing diagnosis", "unsupported": "unsupported diagnosis",
          "correct": "correctly documented", "near_miss": "near-miss", "confounder": "confounder (CKD)",
-         "routine": "routine admission"}
-KIND = {"missing_dx": "missing diagnosis", "unsupported_dx": "unsupported diagnosis"}
+         "routine": "routine admission", "unspecified": "not fully specified",
+         "unspecified_near": "vague, not specific", "conflicting": "conflicting notes",
+         "conflict_near": "stated, then resolved"}
+KIND = {"missing_dx": "missing diagnosis", "unsupported_dx": "unsupported diagnosis",
+        "unspecified_dx": "not fully specified", "conflicting_dx": "conflicting notes"}
 
 
 def _fresh_scan_score(con: duckdb.DuckDBPyConnection) -> Score:
@@ -67,7 +73,10 @@ def _explain(con: duckdb.DuckDBPyConnection, m: dict) -> str:
     """One plain-English line per mistake, with what the note reader actually saw."""
     name = CONDITION.get(m["condition"], m["condition"])
     head = f"**{m['encounter_id']}** ({GROUP.get(m['group'], m['group'])}, {name}): "
-    if m["missed"]:
+    if m["missed"] and m["extra"]:
+        raised = ", ".join(KIND.get(r.split(":")[1], r) for r in m["extra"])
+        what = f"a gap was raised, but as {raised} instead of {KIND.get(m['expected'], m['expected'])}"
+    elif m["missed"]:
         what = ("the evidence met the rule and the notes do not name it, but no gap was raised"
                 if m["expected"] == "missing_dx" else
                 "the notes name it without supporting evidence, but no gap was raised")
@@ -76,9 +85,9 @@ def _explain(con: duckdb.DuckDBPyConnection, m: dict) -> str:
                            (r.split(":") for r in m["extra"]))
         what = f"should have stayed quiet, but raised {raised}"
     chart = load_charts(con, encounter_id=m["encounter_id"])[0]
-    code = TARGET_CODE.get(m["condition"])
+    codes = {TARGET_CODE.get(m["condition"]), VAGUE_CODE.get(m["condition"], ("",))[0]}
     seen = [f"\"{x.clause.strip()[:140]}\"{' (read as negated)' if x.negated else ''}"
-            for x in find_mentions(chart.notes) if x.icd10 == code][:2]
+            for x in find_mentions(chart.notes) if x.icd10 in codes][:2]
     return head + what + (f". The note reader found: {'; '.join(seen)}" if seen else
                           ". The note reader found no mention of it")
 
@@ -139,6 +148,19 @@ def refresh_work(db: Path, work: Path) -> int:
                        WHERE e.encounter_id = n.encounter_id)
                     = (SELECT list(o ORDER BY o.t_hours, o.kind, o.key, o.text) FROM old.ehr.events o
                        WHERE o.encounter_id = n.encounter_id)""")
+            # notes written under an older spec are kept only if they pass today's note check
+            specs = {e.encounter_id: e.mentions for e in load_encounters(con)}
+            stale = []
+            for (eid,) in con.execute("SELECT encounter_id FROM same").fetchall():
+                rows = con.execute("SELECT note_type, hospital_day, text FROM old.ehr.notes "
+                                   "WHERE source = 'llm' AND encounter_id = ?", [eid]).fetchall()
+                notes = NoteSet(notes=[Note(note_type=t, hospital_day=d, text=x) for t, d, x in rows])
+                if not check_notes(notes, specs[eid]).ok:
+                    stale.append(eid)
+            if stale:
+                log.info("%d charts' AI notes fail today's note check and will be rewritten: %s",
+                         len(stale), ", ".join(stale))
+                con.executemany("DELETE FROM same WHERE encounter_id = ?", [[e] for e in stale])
             kept = con.execute("SELECT count(*) FROM same").fetchone()[0]
             con.execute("DELETE FROM ehr.notes WHERE encounter_id IN (SELECT encounter_id FROM same)")
             con.execute("""INSERT INTO ehr.notes SELECT * FROM old.ehr.notes
