@@ -71,6 +71,8 @@ interface QueryState {
   comment?: string;
   answered_by?: string;
   updated: string;
+  sent_at?: string;
+  answered_at?: string;
 }
 
 interface DemoState {
@@ -78,6 +80,7 @@ interface DemoState {
   audit: AuditRow[];
 }
 
+const STALE_AFTER_HOURS = 48; // same threshold as api/reports.py
 const STORAGE_KEY = "wardsight-demo-v1";
 const UR_ORDER: Record<string, number> = {
   long_stay: 0,
@@ -185,7 +188,7 @@ async function answerWith(queryId: string, option: number, comment: string, phys
     ...state,
     queries: {
       ...state.queries,
-      [queryId]: { ...s, status: o.status, option, comment, answered_by: physician, updated: now() },
+      [queryId]: { ...s, status: o.status, option, comment, answered_by: physician, updated: now(), answered_at: now() },
     },
   };
   next = withAudit(next, physician, "answered", queryId, `${q.options[option]} | ${comment}`);
@@ -194,6 +197,43 @@ async function answerWith(queryId: string, option: number, comment: string, phys
   }
   saveState(next);
   return { status: o.status as Status };
+}
+
+const hoursBetween = (from: string, to: number) => (to - Date.parse(from)) / 3_600_000;
+
+function medianOf(values: number[]): number | null {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/** Mirrors reports.response_times: how fast physicians answer, stale queries, agreement by physician. */
+function responseTimes(ix: DemoIndex, state: DemoState): Leadership["responses"] {
+  const nowMs = Date.now();
+  const waits: number[] = [];
+  const stale: Leadership["responses"]["stale"] = [];
+  const physicians = new Map<string, { answered: number; agreed: number }>();
+  for (const q of Object.values(ix.queries)) {
+    const s = current(q, state);
+    if (s.sent_at && s.answered_at) waits.push(hoursBetween(s.sent_at, Date.parse(s.answered_at)));
+    if (s.status === "sent" && s.sent_at && hoursBetween(s.sent_at, nowMs) > STALE_AFTER_HOURS) {
+      stale.push({ query_id: q.query_id, encounter_id: q.encounter_id, hours_waiting: round(hoursBetween(s.sent_at, nowMs), 1) });
+    }
+    if ((s.status === "answered" || s.status === "resolved") && s.answered_by) {
+      const p = physicians.get(s.answered_by) ?? { answered: 0, agreed: 0 };
+      physicians.set(s.answered_by, { answered: p.answered + 1, agreed: p.agreed + Number(s.status === "resolved") });
+    }
+  }
+  const median = medianOf(waits);
+  return {
+    median_hours_to_answer: median == null ? null : round(median, 1),
+    stale_after_hours: STALE_AFTER_HOURS,
+    stale: stale.sort((a, b) => b.hours_waiting - a.hours_waiting),
+    by_physician: [...physicians.entries()]
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([physician, p]) => ({ physician, ...p, agreement_rate: round(p.agreed / p.answered, 3) })),
+  };
 }
 
 export const demoApi: Api = {
@@ -269,7 +309,7 @@ export const demoApi: Api = {
     const result = lintQuery({ ...q, stem: text, targets: ix.lint_targets });
     if (!result.ok) throw new Error(result.problems.join("; "));
     const next = withAudit(
-      { ...state, queries: { ...state.queries, [queryId]: { ...s, status: "sent", stem: text, updated: now() } } },
+      { ...state, queries: { ...state.queries, [queryId]: { ...s, status: "sent", stem: text, updated: now(), sent_at: now() } } },
       ix.reviewer,
       stem == null ? "approved_and_sent" : "edited_approved_and_sent",
       queryId,
@@ -386,6 +426,7 @@ export const demoApi: Api = {
       },
       by_condition: [...byCondition.values()].sort((a, b) => a.condition.localeCompare(b.condition)),
       weights_source: ix.weights_source,
+      responses: responseTimes(ix, state),
     };
   },
 

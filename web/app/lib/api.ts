@@ -144,6 +144,12 @@ export interface Leadership {
     weight_change: number;
   }[];
   weights_source: string;
+  responses: {
+    median_hours_to_answer: number | null;
+    stale_after_hours: number;
+    stale: { query_id: string; encounter_id: string; hours_waiting: number }[];
+    by_physician: { physician: string; answered: number; agreed: number; agreement_rate: number }[];
+  };
 }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {

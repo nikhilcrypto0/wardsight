@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+from datetime import timedelta
 from pathlib import Path
 
 import duckdb
@@ -10,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from wardsight.api.app import create_app
+from wardsight.api.reports import response_times
 from wardsight.engine.scan import scan
 from wardsight.factory import run as build_ward
 from wardsight.notes.template import write_template_notes
@@ -111,6 +113,21 @@ def test_ur_and_leadership_reflect_resolved_queries(client):
     assert after["case_mix"]["current"] > before["case_mix"]["current"]
     assert after["case_mix"]["first_documented"] == before["case_mix"]["first_documented"]
     assert after["queries"]["resolved"] == 1 and after["queries"]["response_rate"] == 1.0
+    responses = after["responses"]
+    assert responses["median_hours_to_answer"] == 0.0  # answered seconds after it was sent
+    assert responses["by_physician"] == [{"physician": "Attending physician", "answered": 1, "agreed": 1,
+                                          "agreement_rate": 1.0}]
+    assert responses["stale"] == []
+
+
+def test_unanswered_query_goes_stale_after_48_hours(client, tmp_path):
+    q = first(client, "sepsis", "missing_dx")
+    client.post(f"/api/queries/{q['query_id']}/approve", json={})
+    with duckdb.connect(str(tmp_path / "wardsight.duckdb")) as con:
+        sent_at = con.execute("SELECT max(ts) FROM ops.audit").fetchone()[0]
+        assert response_times(con, now=sent_at + timedelta(hours=47))["stale"] == []
+        stale = response_times(con, now=sent_at + timedelta(hours=50))["stale"]
+    assert [(r["query_id"], r["hours_waiting"]) for r in stale] == [(q["query_id"], 50.0)]
 
 
 def test_reject_simulate_audit_and_reset(client):

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, type Leadership } from "../lib/api";
+import Link from "next/link";
 import { CONDITION } from "../lib/labels";
 
 function pct(value: number | null): string {
@@ -121,8 +122,74 @@ function LeadershipScreen() {
           </table>
         </section>
       </div>
+      <PhysicianResponse data={data.responses} />
       <p className="text-xs text-slate-400">Weights: {data.weights_source}.</p>
     </div>
+  );
+}
+
+/** How fast physicians answer, who agrees, and which sent queries are waiting too long. */
+function PhysicianResponse({ data }: { data: Leadership["responses"] }) {
+  return (
+    <section className="grid gap-8 lg:grid-cols-3">
+      <div className="rounded-xl bg-white p-5 ring-1 ring-slate-200">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Physician response</h2>
+        <div className="mt-3 font-mono text-4xl tracking-tight">
+          {data.median_hours_to_answer == null ? "—" : `${data.median_hours_to_answer} h`}
+        </div>
+        <p className="mt-1 text-xs text-slate-500">Median time from a query being sent to the physician&apos;s answer.</p>
+        <div className="mt-5 border-t border-slate-100 pt-4">
+          <div className="text-xs uppercase tracking-wide text-slate-500">
+            Waiting more than {data.stale_after_hours} h
+          </div>
+          {data.stale.length === 0 ? (
+            <p className="mt-1 text-sm text-slate-500">None. Every sent query has an answer or is still fresh.</p>
+          ) : (
+            <ul className="mt-2 space-y-1 text-sm">
+              {data.stale.map((s) => (
+                <li key={s.query_id} className="flex justify-between">
+                  <Link href={`/encounters/${s.encounter_id}`} className="font-mono text-blue-700 hover:underline">
+                    {s.encounter_id}
+                  </Link>
+                  <span className="font-mono text-rose-700">{s.hours_waiting} h</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      <div className="rounded-xl bg-white p-5 ring-1 ring-slate-200 lg:col-span-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">By physician</h2>
+        {data.by_physician.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">No answers yet.</p>
+        ) : (
+          <table className="mt-3 w-full text-sm">
+            <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="py-2 font-medium">Physician</th>
+                <th className="py-2 text-right font-medium">Answered</th>
+                <th className="py-2 text-right font-medium">Agreed</th>
+                <th className="py-2 text-right font-medium">Agreement</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {data.by_physician.map((p) => (
+                <tr key={p.physician}>
+                  <td className="py-2">{p.physician}</td>
+                  <td className="py-2 text-right font-mono">{p.answered}</td>
+                  <td className="py-2 text-right font-mono">{p.agreed}</td>
+                  <td className="py-2 text-right font-mono">{pct(p.agreement_rate)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <p className="mt-3 text-xs text-slate-500">
+          A low agreement rate can mean a query was not needed, or a physician who needs a conversation, not more
+          queries.
+        </p>
+      </div>
+    </section>
   );
 }
 

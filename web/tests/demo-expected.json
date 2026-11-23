@@ -65,6 +65,19 @@
       "response_rate": 1.0,
       "sent": 75
     },
+    "responses": {
+      "by_physician": [
+        {
+          "agreed": 57,
+          "agreement_rate": 0.76,
+          "answered": 75,
+          "physician": "Dr. Simulated (physician agent)"
+        }
+      ],
+      "median_hours_to_answer": 0.0,
+      "stale": [],
+      "stale_after_hours": 48
+    },
     "weights_source": "CMS IPPS FY2027 Table 5 (v44), via quickintell.com; verify before real use"
   },
   "open_flags": {
