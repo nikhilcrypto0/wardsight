@@ -66,3 +66,20 @@ def test_refresh_keeps_paid_notes_only_for_unchanged_charts(tmp_path: Path):
         ledger = con.execute("SELECT count(*) FROM ops.llm_ledger").fetchone()[0]
     assert kept == set(paid[1:])       # the changed chart's notes were not reused
     assert ledger >= len(paid)         # the bill so far is kept
+
+
+def test_variety_mode_uses_real_world_wording_offline_and_with_a_model(tmp_path: Path):
+    run(tmp_path, seed=5, synthea_dir=None)
+    db = tmp_path / "wardsight.duckdb"
+    with duckdb.connect(str(db)) as con:
+        write_template_notes(con, load_encounters(con), seed=0)
+    offline = run_eval(db, tmp_path / "off.duckdb", config(tmp_path, 10_000_000), None, "template notes",
+                       None, tmp_path / "off.md", variety=True)
+    assert offline["mistakes"] == 0 and "VARIETY" in (tmp_path / "off.md").read_text()
+    generate, _ = fake_model(leak_first=False)  # the fake model echoes the required (varied) wording
+    online = run_eval(db, tmp_path / "on.duckdb", config(tmp_path, 10_000_000), generate, "fake", 8,
+                      tmp_path / "on.md", variety=True)
+    assert online["written"] + online["failed"] == 8
+    with duckdb.connect(str(tmp_path / "on.duckdb"), read_only=True) as con:
+        text = " ".join(t for (t,) in con.execute("SELECT text FROM ehr.notes WHERE source = 'llm'").fetchall())
+    assert text  # notes were written with the varied wording, and they pass the same leak check

@@ -17,7 +17,9 @@ makes clinical calls, an LLM only drafts wording, a human approves anything that
 - `uv run wardsight-notes --template` — plain template notes for every chart (offline, free)
 - `uv run wardsight-llm-eval [--limit 5]` — AI-written notes for the dev ward on a copy
   (`data/wardsight-llm.duckdb`), rescan, score vs the template baseline; report in
-  `docs/eval/llm-notes-dev.md`. Needs `.env`; resumes without paying twice; never touches held-out
+  `docs/eval/llm-notes-dev.md`. Needs `.env`; resumes without paying twice; never touches held-out.
+  `--variety` = real-world wording (abbreviations, hedging, typos; notes/variety.py), own copy and report;
+  `--offline` = template notes instead of the model (free)
 - `uv run wardsight-scan --split dev` — run the detection engine, flags into `ops.flags`
 - `uv run wardsight-bench --split dev` — score flags against the answer key
 - `uv run wardsight-bench --split heldout --final` — ONCE, at the very end; a rerun is refused, and it

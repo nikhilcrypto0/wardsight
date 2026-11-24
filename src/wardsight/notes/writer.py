@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import logging
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 
@@ -21,6 +22,7 @@ import duckdb
 from wardsight.notes.budget import BudgetExceeded, Ledger, load_budget
 from wardsight.notes.spec import SYSTEM_PROMPT, NoteSet, check_notes, user_prompt
 from wardsight.notes.template import NOTES_DDL, write_template_notes
+from wardsight.notes.variety import variety_rng, vary
 from wardsight.reload import load_encounters
 from wardsight.settings import check_model, openai_model
 
@@ -44,8 +46,15 @@ def openai_generate(model: str, max_output_tokens: int) -> Generate:
     return call
 
 
+VARIETY_STYLE = """
+Write like a busy hospitalist, not a textbook: common abbreviations (pt, hx, abx, f/u, BMP, CXR, NC),
+copy parts of the previous day's assessment forward into the progress note, terse fragments, and one
+or two harmless typos in ordinary words. Keep every REQUIRED wording and negation EXACTLY as given,
+even when it is abbreviated, hedged or misspelled."""
+
+
 def write_notes(db: Path, config: Path, generate: Generate, model: str, limit: int | None,
-                split: str | None = None) -> dict[str, int]:
+                split: str | None = None, variety: bool = False) -> dict[str, int]:
     budget = load_budget(config)
     stats = {"written": 0, "failed": 0}
     with duckdb.connect(str(db)) as con:
@@ -58,7 +67,10 @@ def write_notes(db: Path, config: Path, generate: Generate, model: str, limit: i
         log.info("%d charts need notes", len(todo))
         try:
             for enc in todo:
-                ok = _one(con, ledger, generate, model, enc, budget.max_attempts_per_item)
+                if variety:  # real-world wording, the same for a chart on every run
+                    enc = replace(enc, mentions=vary(enc.mentions, variety_rng(enc.encounter_id)))
+                ok = _one(con, ledger, generate, model, enc, budget.max_attempts_per_item,
+                          SYSTEM_PROMPT + VARIETY_STYLE if variety else SYSTEM_PROMPT)
                 stats["written" if ok else "failed"] += 1
         except BudgetExceeded as exc:
             log.error("HALTED: %s (%d tokens this run)", exc, ledger.run_tokens)
@@ -67,11 +79,12 @@ def write_notes(db: Path, config: Path, generate: Generate, model: str, limit: i
     return stats
 
 
-def _one(con, ledger: Ledger, generate: Generate, model: str, enc, attempts: int) -> bool:
+def _one(con, ledger: Ledger, generate: Generate, model: str, enc, attempts: int,
+         system: str = SYSTEM_PROMPT) -> bool:
     prompt = user_prompt(enc)
     for attempt in range(1, attempts + 1):
         ledger.check_before_call()
-        parsed, tokens_in, tokens_out = generate(SYSTEM_PROMPT, prompt)
+        parsed, tokens_in, tokens_out = generate(system, prompt)
         result = check_notes(parsed, enc.mentions) if parsed else None
         status = "ok" if result and result.ok else "rejected"
         ledger.record(enc.encounter_id, model, tokens_in, tokens_out, status)

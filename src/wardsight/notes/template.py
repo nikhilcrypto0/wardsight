@@ -8,6 +8,7 @@ for realistic wording; the engine reads ehr.notes either way.
 from __future__ import annotations
 
 import random
+from dataclasses import replace
 from datetime import timedelta
 
 import duckdb
@@ -15,6 +16,7 @@ import duckdb
 from wardsight.codes import PRINCIPAL_TERMS
 from wardsight.models import Encounter
 from wardsight.notes.spec import Note, NoteSet, chart_digest, check_notes
+from wardsight.notes.variety import variety_rng, vary
 
 NOTES_DDL = """CREATE TABLE IF NOT EXISTS ehr.notes (encounter_id VARCHAR, note_type VARCHAR,
     hospital_day INTEGER, ts TIMESTAMP, text VARCHAR, source VARCHAR)"""
@@ -49,13 +51,18 @@ def template_notes(enc: Encounter, rng: random.Random) -> NoteSet:
     return NoteSet(notes=[Note(note_type=k, hospital_day=d, text=t) for k, (d, t) in texts.items()])
 
 
-def write_template_notes(con: duckdb.DuckDBPyConnection, encounters: list[Encounter], seed: int) -> int:
-    """Replace all notes with template notes. Returns the number of charts written."""
+def write_template_notes(con: duckdb.DuckDBPyConnection, encounters: list[Encounter], seed: int,
+                         variety: bool = False) -> int:
+    """Replace all notes with template notes. Returns the number of charts written.
+
+    variety=True writes each planned diagnosis in real-world wording (notes/variety.py)."""
     con.execute(NOTES_DDL)
     con.execute("DELETE FROM ehr.notes")
     rng = random.Random(f"{seed}-template-notes")
     rows = []
     for enc in encounters:
+        if variety:
+            enc = replace(enc, mentions=vary(enc.mentions, variety_rng(enc.encounter_id)))
         note_set = template_notes(enc, rng)
         result = check_notes(note_set, enc.mentions)
         if not result.ok:

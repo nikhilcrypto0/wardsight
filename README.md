@@ -123,8 +123,10 @@ Plain code, no AI, reading only what a hospital system would hold.
 Dev-set score with template notes: 95 of 95 planted gaps caught, 0 false alarms, including near-miss
 charts for each alert type. On AI-written notes (`uv run wardsight-llm-eval`, gpt-5.4-mini, all 234 dev
 charts, about $1.16 in total): 95 of 95, 0 false alarms ([report](docs/eval/llm-notes-dev.md)). Those AI
-notes still use set wording per diagnosis, so free-form shorthand is the next test; the held-out set is
-scored once, at the end.
+notes still use set wording per diagnosis. With real-world wording (`--variety`: abbreviations, "r/o" and
+"likely", typos; each meaning-preserving under the ICD-10-CM uncertain-diagnosis rule) on template notes:
+95 of 95, 0 false alarms; the earlier note reader scored 83 of 95 with 16 false alarms on the same notes.
+The held-out set is scored once, at the end.
 
 ## Physician queries (milestone 3)
 

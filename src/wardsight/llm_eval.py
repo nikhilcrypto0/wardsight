@@ -32,7 +32,8 @@ from wardsight.engine.gaps import VAGUE_CODE
 from wardsight.engine.scan import scan
 from wardsight.notes.budget import load_budget
 from wardsight.notes.spec import Note, NoteSet, check_notes
-from wardsight.notes.template import NOTES_DDL
+from wardsight.notes.template import NOTES_DDL, write_template_notes
+from wardsight.notes.variety import variety_rng, vary
 from wardsight.notes.writer import Generate, openai_generate, write_notes
 from wardsight.queries.lint import TARGET_CODE
 from wardsight.reload import load_encounters
@@ -92,14 +93,21 @@ def _explain(con: duckdb.DuckDBPyConnection, m: dict) -> str:
                           ". The note reader found no mention of it")
 
 
-def _report(base: Score, new: Score, errors: list[str], notes: dict, bill: dict, model: str) -> str:
+VARIETY_NOTE = (" in VARIETY mode: each planned diagnosis written as physicians write it (abbreviations, "
+                "hedging such as 'r/o' or 'likely', typos, other negation forms; all meaning-preserving "
+                "under the ICD-10-CM coding rules, see notes/variety.py), plus copy-forward and terse style")
+
+
+def _report(base: Score, new: Score, errors: list[str], notes: dict, bill: dict, model: str,
+            variety: bool = False) -> str:
     def line(s: Score) -> str:
         return (f"{s.caught}/{s.planted} planted gaps caught, {s.false_alarms} false alarms "
                 f"on {s.quiet_charts} charts that should stay quiet")
     rows = "\n".join(f"| {GROUP.get(g, g)} | {n} | {ok} |" for g, n, ok, _ in new.by_group)
     return f"""# Engine on AI-written notes: development ward
 
-Run {date.today().isoformat()} with `{model}`. Held-out ward untouched; final exam not run.
+Run {date.today().isoformat()} with `{model}`{VARIETY_NOTE if variety else ""}. Held-out ward untouched;
+final exam not run.
 
 | Notes | Result |
 | --- | --- |
@@ -125,7 +133,7 @@ Charts with AI notes: {notes['llm']} of {notes['total']}{
 """
 
 
-def refresh_work(db: Path, work: Path) -> int:
+def refresh_work(db: Path, work: Path, variety: bool = False) -> int:
     """Rebuild the working copy from the current database, keeping AI notes already paid for.
 
     Notes carry over only for charts whose events are byte-identical in both, so a rebuilt
@@ -149,7 +157,8 @@ def refresh_work(db: Path, work: Path) -> int:
                     = (SELECT list(o ORDER BY o.t_hours, o.kind, o.key, o.text) FROM old.ehr.events o
                        WHERE o.encounter_id = n.encounter_id)""")
             # notes written under an older spec are kept only if they pass today's note check
-            specs = {e.encounter_id: e.mentions for e in load_encounters(con)}
+            specs = {e.encounter_id: vary(e.mentions, variety_rng(e.encounter_id)) if variety else e.mentions
+                     for e in load_encounters(con)}
             stale = []
             for (eid,) in con.execute("SELECT encounter_id FROM same").fetchall():
                 rows = con.execute("SELECT note_type, hospital_day, text FROM old.ehr.notes "
@@ -174,11 +183,17 @@ def refresh_work(db: Path, work: Path) -> int:
     return kept
 
 
-def run_eval(db: Path, work: Path, config: Path, generate: Generate, model: str,
-             limit: int | None, report: Path) -> dict:
+def run_eval(db: Path, work: Path, config: Path, generate: Generate | None, model: str,
+             limit: int | None, report: Path, variety: bool = False) -> dict:
+    """generate=None writes free template notes instead of calling a model (offline check)."""
     base = baseline(db)
-    refresh_work(db, work)
-    stats = write_notes(work, config, generate, model, limit, split=SPLIT)
+    refresh_work(db, work, variety)
+    if generate is None:
+        with duckdb.connect(str(work)) as con:
+            dev = [e for e in load_encounters(con) if e.split == SPLIT]
+            stats = {"written": write_template_notes(con, dev, seed=0, variety=variety), "failed": 0}
+    else:
+        stats = write_notes(work, config, generate, model, limit, split=SPLIT, variety=variety)
     with duckdb.connect(str(work)) as con:
         new = _fresh_scan_score(con)
         errors = [_explain(con, m) for m in mistakes(con, SPLIT)]
@@ -187,13 +202,15 @@ def run_eval(db: Path, work: Path, config: Path, generate: Generate, model: str,
                    count(DISTINCT n.encounter_id) FILTER (WHERE n.source = 'llm')
             FROM ehr.encounters e LEFT JOIN ehr.notes n USING (encounter_id)
             WHERE e.split = ?""", [SPLIT]).fetchone()
+        has_ledger = con.execute("SELECT count(*) FROM duckdb_tables() WHERE schema_name = 'ops' "
+                                 "AND table_name = 'llm_ledger'").fetchone()[0]
         calls, rejected, tokens = con.execute("""
             SELECT count(*), count(*) FILTER (WHERE status = 'rejected'),
                    coalesce(sum(input_tokens + output_tokens), 0)
-            FROM ops.llm_ledger WHERE step = 'notes'""").fetchone()
+            FROM ops.llm_ledger WHERE step = 'notes'""").fetchone() if has_ledger else (0, 0, 0)
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(_report(base, new, errors, {"total": total, "llm": llm},
-                              {"calls": calls, "rejected": rejected, "tokens": tokens}, model))
+                              {"calls": calls, "rejected": rejected, "tokens": tokens}, model, variety))
     return {"baseline_caught": base.caught, "caught": new.caught, "planted": new.planted,
             "false_alarms": new.false_alarms, "mistakes": len(errors), "llm_charts": llm, **stats}
 
@@ -204,16 +221,25 @@ def main() -> None:
     parser.add_argument("--work", type=Path, default=Path("data/wardsight-llm.duckdb"))
     parser.add_argument("--config", type=Path, default=Path("wardsight.toml"))
     parser.add_argument("--limit", type=int, default=None, help="only this many new charts (smoke test)")
-    parser.add_argument("--report", type=Path, default=Path("docs/eval/llm-notes-dev.md"))
+    parser.add_argument("--report", type=Path, default=None)
+    parser.add_argument("--variety", action="store_true", help="real-world wording (own copy and report)")
+    parser.add_argument("--offline", action="store_true", help="template notes instead of the model: free")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    suffix = ("-variety" if args.variety else "") + ("-offline" if args.offline else "")
+    work = args.work if args.work != Path("data/wardsight-llm.duckdb") else Path(f"data/wardsight-llm{suffix}.duckdb")
+    report = args.report or Path(f"docs/eval/llm-notes-dev{suffix}.md")
+    if args.offline:
+        print(run_eval(args.db, work, args.config, None, "template notes", None, report, args.variety))
+        print(f"report: {report}")
+        return
     model = openai_model()
     check_model(model)  # free: stops a paid run on a misspelled or retired model
     budget = load_budget(args.config)
-    result = run_eval(args.db, args.work, args.config,
-                      openai_generate(model, budget.max_output_tokens_per_call), model, args.limit, args.report)
+    result = run_eval(args.db, work, args.config,
+                      openai_generate(model, budget.max_output_tokens_per_call), model, args.limit, report, args.variety)
     print(result)
-    print(f"report: {args.report}")
+    print(f"report: {report}")
 
 
 if __name__ == "__main__":

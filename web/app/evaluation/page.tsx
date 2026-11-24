@@ -147,9 +147,10 @@ export default function EvaluationPage() {
           <li>
             <span className="font-medium">Free-form wording.</span> The scores above use template notes. With all 234
             development charts rewritten by an AI model (gpt-5.4-mini, run on 2026-11-23) the engine scored the same,
-            95 of 95 with no false alarms. But those AI notes still had to use set wording for each diagnosis, so
-            shorthand and hedging (&ldquo;AKI on CKD&rdquo;, &ldquo;?sepsis&rdquo;, &ldquo;concern for&rdquo;) are
-            not tested yet.
+            95 of 95 with no false alarms. Those AI notes used set wording per diagnosis. Real-world wording
+            (&ldquo;AKI&rdquo;, &ldquo;r/o sepsis&rdquo;, &ldquo;likely&rdquo;, typos such as &ldquo;sespis&rdquo;)
+            has been tested on template notes only: 95 of 95 with no false alarms, where the earlier note reader
+            scored 83 of 95 with 16 false alarms. An AI-written run in that style is next.
           </li>
           <li>
             <span className="font-medium">The held-out ward.</span> Not scored yet; it is run once, after the rules
