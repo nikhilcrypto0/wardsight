@@ -60,7 +60,8 @@ function WorklistPage() {
   if (!rows || !summary) return <p className="text-slate-500">Loading worklist…</p>;
 
   const q = summary.queries;
-  const openFlags = (summary.open_flags.missing_dx ?? 0) + (summary.open_flags.unsupported_dx ?? 0);
+  // every alert type counts (missing, unsupported, not fully specified, conflicting)
+  const openFlags = Object.values(summary.open_flags).reduce((sum, n) => sum + (n ?? 0), 0);
 
   return (
     <div className="space-y-8">
