@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import QueryCard from "../../components/QueryCard";
 import Sparkline from "../../components/Sparkline";
 import { api, type Encounter } from "../../lib/api";
+import DrgTimeline from "../../components/DrgTimeline";
 import { CONDITION, DrgShift, KindBadge, SERIES_LABEL } from "../../lib/labels";
 
 const TIMELINE_PREVIEW = 12;
@@ -86,6 +87,8 @@ export default function EncounterView() {
           {chart.queries.map((q) => (
             <QueryCard key={q.query_id} query={q} onChanged={load} />
           ))}
+
+          <DrgTimeline steps={chart.drg_timeline} />
         </section>
 
         <section className="space-y-6">

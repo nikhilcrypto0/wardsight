@@ -77,7 +77,7 @@ def _outcome(con: duckdb.DuckDBPyConnection, q: actions.QueryRow, option_index: 
         return {
             "status": status, "drg_before": before, "drg_after": after,
             "addendum": actions.addendum_text(q, q.options[option_index], ""),
-            "drg": chart_after["drg"], "flags": chart_after["flags"],
+            "drg": chart_after["drg"], "flags": chart_after["flags"], "drg_timeline": chart_after["drg_timeline"],
             "ur_row": asdict(review(chart, admit, find_flags(chart))), "drgs": _drgs(chart),
         }
     finally:

@@ -47,6 +47,13 @@ Two tests keep the browser honest (`cd web && npm test`, also in CI):
 - working every query in the browser lands on exactly the engine's totals (statuses, open gaps, case
   mix, utilization review).
 
+## Working DRG vs final DRG
+
+Each chart shows its billing category over the stay: regrouped after every note (history and physical,
+progress notes, discharge summary, physician addenda) from what the record documents so far, with the
+diagnoses each note added or removed and, while a gap is open, the category it would reach if resolved.
+CDI teams use this to see whether a query can still change the final DRG before the patient leaves.
+
 ## Audit-defense packet
 
 Every answered query has a one-page packet (`/packet/<query id>`, printable to PDF): the evidence values

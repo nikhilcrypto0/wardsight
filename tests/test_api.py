@@ -73,6 +73,12 @@ def test_confirmed_missing_dx_resolves_and_moves_drg(client):
     assert any(n["type"] == "addendum" for n in chart["notes"])
     answered = next(x for x in chart["queries"] if x["query_id"] == q["query_id"])
     assert answered["drg_before"] != answered["drg_after"]
+    steps = chart["drg_timeline"]  # working DRG during the stay vs final DRG, note by note
+    assert steps[0]["source"] == "admission" and steps[-1]["source"] == "addendum"
+    assert steps[-1]["drg"] == chart["drg"]["drg"] == answered["drg_after"]
+    assert steps[-2]["drg"] == answered["drg_before"] and steps[-2]["open_gaps"] >= 1
+    assert steps[-2]["potential_drg"] == answered["drg_after"]  # the open gap predicted the change
+    assert "A41.9" in [c["code"] for c in steps[-1]["added"]]
     row = next(r for r in client.get("/api/worklist").json() if r["query_id"] == q["query_id"])
     assert row["priority"] is None  # a closed gap drops out of the ranking
 

@@ -38,6 +38,10 @@ test("D0011: approve, physician answers Sepsis, billing category 690 -> 872", as
   assert.equal(after.drg.drg, 872);
   assert.equal(after.flags.length, 0);
   assert.match(after.notes.at(-1)!.text, /^ADDENDUM in response to documentation query: sepsis\. Agree/);
+  const steps = after.drg_timeline;
+  assert.equal(steps.at(-1)!.source, "addendum");
+  assert.equal(steps.at(-1)!.drg, 872);
+  assert.equal((await demoApi.encounter("D0072")).drg_timeline.at(-1)!.source, "discharge_summary");
   const actions = (await demoApi.audit()).map((a) => a.action);
   assert.deepEqual(actions.slice(0, 3), ["flag_resolved", "answered", "approved_and_sent"]);
 });

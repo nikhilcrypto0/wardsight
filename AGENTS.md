@@ -63,7 +63,8 @@ makes clinical calls, an LLM only drafts wording, a human approves anything that
 - `api/app.py` — FastAPI; `api/reports.py` — UR board + leadership metrics + physician response times;
   `api/packet.py` — audit-defense packet per answered query; `rules_doc.py` — the clinical rules in words
   (evaluation page + packets); `queries/priority.py` — worklist priority score
-- `engine/ur.py` — two-midnight + GMLOS review, case mix; `engine/drg_table.py` — v44 weights/GMLOS (sourced)
+- `engine/ur.py` — two-midnight + GMLOS review, case mix; `engine/drg_table.py` — v44 weights/GMLOS (sourced);
+  `engine/drg_timeline.py` — working DRG after every note vs final DRG, with what each note changed
 - `replay.py` — ward replay timeline; `web/` — Next.js screens (replay, worklist, chart, inbox, UR,
   leadership, audit); public mode runs all of them in the browser via `web/app/lib/demo.ts`
 - `demo_export.py` — records every workflow outcome for the hosted demo; `web/app/lib/lint.ts` is the

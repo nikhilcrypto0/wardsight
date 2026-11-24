@@ -19,6 +19,7 @@ from wardsight.api import reports
 from wardsight.api.packet import audit_packet
 from wardsight.engine.chart import load_charts
 from wardsight.engine.drg import coded_diagnoses, group
+from wardsight.engine.drg_timeline import drg_timeline
 from wardsight.queries.lint import lint_query
 from wardsight.queries.priority import priority
 from wardsight.workflow import actions
@@ -102,6 +103,7 @@ def encounter_payload(con: duckdb.DuckDBPyConnection, encounter_id: str) -> dict
                      if (t := e.t_hours) is not None and e.text],
         "notes": [{"type": n.note_type, "day": n.hospital_day, "text": n.text} for n in chart.notes],
         "flags": flags,
+        "drg_timeline": drg_timeline(chart),
         "queries": [{**q, "options": json.loads(q["options"]), "indicators": json.loads(q["indicators"]),
                      "problems": json.loads(q["problems"] or "[]")} for q in queries],
     }

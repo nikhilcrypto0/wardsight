@@ -31,6 +31,7 @@ interface Outcome {
   addendum: string | null;
   drg: Encounter["drg"];
   flags: Flag[];
+  drg_timeline: Encounter["drg_timeline"];
   ur_row: UrRow;
   drgs: [number, number, number];
 }
@@ -301,7 +302,7 @@ export const demoApi: Api = {
         const notes = o.addendum
           ? [...chart.notes, { type: "addendum", day: base.los_days - 1, text: o.addendum + (s.comment ?? "") }]
           : chart.notes;
-        chart = { ...chart, drg: o.drg, flags: o.flags, notes };
+        chart = { ...chart, drg: o.drg, flags: o.flags, notes, drg_timeline: o.drg_timeline };
       }
       chart = { ...chart, queries: [...chart.queries, queryView(q, s)] };
     }

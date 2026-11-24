@@ -73,6 +73,21 @@ export interface Query {
 
 export type Series = Record<string, [number, number][]>;
 
+export interface DrgStep {
+  hour: number;
+  day: number;
+  source: string;
+  drg: number;
+  description: string;
+  severity: string;
+  weight: number | null;
+  added: { code: string; name: string }[];
+  removed: { code: string; name: string }[];
+  open_gaps: number;
+  potential_drg: number;
+  potential_description: string;
+}
+
 export interface Encounter {
   encounter_id: string;
   age: number;
@@ -86,6 +101,7 @@ export interface Encounter {
   timeline: { t: number; kind: string; text: string }[];
   notes: { type: string; day: number; text: string }[];
   flags: Flag[];
+  drg_timeline: DrgStep[];
   queries: Query[];
 }
 
