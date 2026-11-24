@@ -111,3 +111,14 @@ def test_reload_round_trip(db: Path):
     assert len(encounters) == ALL_CHARTS
     assert sum(len(e.events) for e in encounters) == events
     assert all(e.mentions for e in encounters)
+
+
+def test_check_rejects_denying_a_planned_diagnosis():
+    aki = (Mention("N17.9", "concern for AKI", "present"),)
+    assert check_notes(notes("Assessment: concern for AKI, trend BMP."), aki).ok
+    denied = check_notes(notes("Assessment: concern for AKI.", "Discharge: no AKI developed."), aki)
+    assert not denied.ok and any("denies 'aki'" in p for p in denied.problems)
+    assert not check_notes(notes("Concern for AKI.", "AKI ruled out."), aki).ok
+    # a planned rule-out of the same diagnosis is allowed
+    planned = (Mention("N17.9", "acute kidney injury", "present"), Mention("N17.9", "no AKI", "negated"))
+    assert check_notes(notes("Acute kidney injury.", "Later: no AKI."), planned).ok

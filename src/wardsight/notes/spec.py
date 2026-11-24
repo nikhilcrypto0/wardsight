@@ -8,6 +8,7 @@ is not supposed to be there.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
@@ -136,7 +137,29 @@ def check_notes(note_set: NoteSet, mentions: tuple[Mention, ...]) -> CheckResult
     for word in forbidden_terms(mentions):
         if _contains_word(scrubbed, word):
             problems.append(f"names a diagnosis it must not: '{word}'")
+    problems += _denied(text, mentions)
     return CheckResult(not problems, tuple(problems))
+
+
+DENIAL_BEFORE = r"(?:no|not|without|denies|negative for|no evidence of)\s+(?:acute\s+)?"
+DENIAL_AFTER = r"(?:\s+(?:was|has been|is))?\s+(?:ruled out|excluded|unlikely|not present)"
+
+
+def _denied(text: str, mentions: tuple[Mention, ...]) -> list[str]:
+    """A diagnosis the plan says is documented, and never ruled out, must not be denied anywhere.
+
+    Otherwise the chart silently changes test group, e.g. "concern for AKI" on admission and
+    "no AKI developed" at discharge on a chart planned as an unsupported AKI.
+    """
+    ruled_out = {m.icd10 for m in mentions if m.assertion == "negated"}
+    problems = []
+    for code in sorted({m.icd10 for m in mentions if m.assertion == "present"} - ruled_out):
+        for word in CONDITION_TERMS.get(code, ()):
+            w = re.escape(word)
+            if re.search(rf"(?<![a-z]){DENIAL_BEFORE}{w}(?![a-z])|(?<![a-z]){w}{DENIAL_AFTER}", text):
+                problems.append(f"denies '{word}', which the plan says is documented")
+                break
+    return problems
 
 
 def _placed_elsewhere(m: Mention, note_text: str, mentions: tuple[Mention, ...]) -> bool:

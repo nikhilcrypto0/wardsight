@@ -126,6 +126,8 @@ charts, about $1.16 in total): 95 of 95, 0 false alarms ([report](docs/eval/llm-
 notes still use set wording per diagnosis. With real-world wording (`--variety`: abbreviations, "r/o" and
 "likely", typos; each meaning-preserving under the ICD-10-CM uncertain-diagnosis rule) on template notes:
 95 of 95, 0 false alarms; the earlier note reader scored 83 of 95 with 16 false alarms on the same notes.
+On AI-written notes in that style (233 of 234 charts, about $1.33): 95 of 95, 0 false alarms
+([report](docs/eval/llm-notes-dev-variety.md)).
 The held-out set is scored once, at the end.
 
 ## Physician queries (milestone 3)

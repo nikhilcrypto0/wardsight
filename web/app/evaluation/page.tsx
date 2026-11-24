@@ -149,8 +149,10 @@ export default function EvaluationPage() {
             development charts rewritten by an AI model (gpt-5.4-mini, run on 2026-11-23) the engine scored the same,
             95 of 95 with no false alarms. Those AI notes used set wording per diagnosis. Real-world wording
             (&ldquo;AKI&rdquo;, &ldquo;r/o sepsis&rdquo;, &ldquo;likely&rdquo;, typos such as &ldquo;sespis&rdquo;)
-            has been tested on template notes only: 95 of 95 with no false alarms, where the earlier note reader
-            scored 83 of 95 with 16 false alarms. An AI-written run in that style is next.
+            scored 95 of 95 with no false alarms on template notes (the earlier note reader: 83 of 95 with 16 false
+            alarms) and 95 of 95 on AI-written notes in that style. One open clinical question: whether a hedged
+            diagnosis that is ruled out by discharge (&ldquo;concern for AKI&rdquo;, then &ldquo;no AKI&rdquo;)
+            should be queried as conflicting documentation. No clinician has reviewed the rules yet.
           </li>
           <li>
             <span className="font-medium">The held-out ward.</span> Not scored yet; it is run once, after the rules
