@@ -14,7 +14,7 @@ import argparse
 import logging
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import duckdb
@@ -79,6 +79,11 @@ def write_notes(db: Path, config: Path, generate: Generate, model: str, limit: i
     return stats
 
 
+REJECTIONS_DDL = """CREATE SCHEMA IF NOT EXISTS ops;
+CREATE TABLE IF NOT EXISTS ops.note_rejections (ts TIMESTAMP, encounter_id VARCHAR, model VARCHAR,
+    attempt INTEGER, problems VARCHAR)"""
+
+
 def _one(con, ledger: Ledger, generate: Generate, model: str, enc, attempts: int,
          system: str = SYSTEM_PROMPT) -> bool:
     prompt = user_prompt(enc)
@@ -93,6 +98,9 @@ def _one(con, ledger: Ledger, generate: Generate, model: str, enc, attempts: int
             return True
         problems = result.problems if result else ("output did not match the note schema",)
         log.info("%s attempt %d rejected: %s", enc.encounter_id, attempt, "; ".join(problems))
+        con.execute(REJECTIONS_DDL)  # why each draft was rejected, so every regeneration is auditable
+        con.execute("INSERT INTO ops.note_rejections VALUES (?, ?, ?, ?, ?)",
+                    [datetime.now(), enc.encounter_id, model, attempt, "; ".join(problems)])
         prompt = user_prompt(enc) + "\n\nYOUR LAST DRAFT WAS REJECTED. Fix: " + "; ".join(problems)
     log.warning("%s: no valid notes after %d attempts", enc.encounter_id, attempts)
     return False

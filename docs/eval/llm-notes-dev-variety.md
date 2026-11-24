@@ -8,7 +8,7 @@ final exam not run.
 | Template notes (clean wording, the easy case) | 95/95 planted gaps caught, 0 false alarms on 139 charts that should stay quiet |
 | AI-written notes | 95/95 planted gaps caught, 0 false alarms on 139 charts that should stay quiet |
 
-Charts with AI notes: 233 of 234 (1 still have template notes: the AI draft failed the leak check three times, or the run stopped at a budget cap; re-run to finish).
+Charts with AI notes: 233 of 234. Still on template notes: D0221 (every AI draft was rejected by the note check, or the run stopped at a budget cap).
 
 | Test group | Charts | Correct |
 | --- | --- | --- |
@@ -29,5 +29,6 @@ None.
 
 ## Cost
 
-295 model calls (60 drafts rejected by the leak check and retried),
+295 model calls: 235 drafts accepted, 60 rejected by the note
+check (which compares the planned wording with the note text only, never the engine) and retried.
 505,327 tokens in total. Budget caps from wardsight.toml applied to every call.

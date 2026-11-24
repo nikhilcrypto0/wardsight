@@ -150,9 +150,16 @@ export default function EvaluationPage() {
             95 of 95 with no false alarms. Those AI notes used set wording per diagnosis. Real-world wording
             (&ldquo;AKI&rdquo;, &ldquo;r/o sepsis&rdquo;, &ldquo;likely&rdquo;, typos such as &ldquo;sespis&rdquo;)
             scored 95 of 95 with no false alarms on template notes (the earlier note reader: 83 of 95 with 16 false
-            alarms) and 95 of 95 on AI-written notes in that style. One open clinical question: whether a hedged
-            diagnosis that is ruled out by discharge (&ldquo;concern for AKI&rdquo;, then &ldquo;no AKI&rdquo;)
-            should be queried as conflicting documentation. No clinician has reviewed the rules yet.
+            alarms) and 95 of 95 on AI-written notes in that style, on 233 of 234 charts. How the AI notes were
+            made: 295 drafts, 60 rejected by the note check (which compares the planned wording with the note text
+            only, never the engine) and redrafted. Chart D0221 never got an accepted draft (rejected 3 times in each
+            of two runs) and kept its template notes. Its wording must stay in the admission note, and the
+            copy-forward style most likely carried it into later notes; reasons were not recorded then and are now. D0109 and D0234 were redrafted once after the check
+            was tightened; that choice was made by the check, before any scoring. Open question for a clinician: is
+            a hedged diagnosis ruled out by discharge (&ldquo;concern for AKI&rdquo;, then &ldquo;no AKI&rdquo;)
+            conflicting documentation? The coding-side view: ICD-10-CM II.H applies to uncertain diagnoses at the
+            time of discharge, so one ruled out by then is not coded and reads as a progression, not a conflict.
+            No clinician has reviewed the rules yet.
           </li>
           <li>
             <span className="font-medium">The held-out ward.</span> Not scored yet; it is run once, after the rules

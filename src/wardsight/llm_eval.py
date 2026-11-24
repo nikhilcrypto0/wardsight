@@ -115,8 +115,8 @@ final exam not run.
 | AI-written notes | {line(new)} |
 
 Charts with AI notes: {notes['llm']} of {notes['total']}{
-    f" ({notes['total'] - notes['llm']} still have template notes: the AI draft failed the leak check "
-    "three times, or the run stopped at a budget cap; re-run to finish)" if notes['llm'] < notes['total'] else ""}.
+    f". Still on template notes: {', '.join(notes['template_ids'])} (every AI draft was rejected by the "
+    "note check, or the run stopped at a budget cap)" if notes['llm'] < notes['total'] else ""}.
 
 | Test group | Charts | Correct |
 | --- | --- | --- |
@@ -128,7 +128,8 @@ Charts with AI notes: {notes['llm']} of {notes['total']}{
 
 ## Cost
 
-{bill['calls']} model calls ({bill['rejected']} drafts rejected by the leak check and retried),
+{bill['calls']} model calls: {bill['calls'] - bill['rejected']} drafts accepted, {bill['rejected']} rejected by the note
+check (which compares the planned wording with the note text only, never the engine) and retried.
 {bill['tokens']:,} tokens in total. Budget caps from wardsight.toml applied to every call.
 """
 
@@ -208,8 +209,11 @@ def run_eval(db: Path, work: Path, config: Path, generate: Generate | None, mode
             SELECT count(*), count(*) FILTER (WHERE status = 'rejected'),
                    coalesce(sum(input_tokens + output_tokens), 0)
             FROM ops.llm_ledger WHERE step = 'notes'""").fetchone() if has_ledger else (0, 0, 0)
+        template_ids = [e for (e,) in con.execute("""
+            SELECT encounter_id FROM ehr.encounters WHERE split = ? AND encounter_id NOT IN
+                (SELECT encounter_id FROM ehr.notes WHERE source = 'llm') ORDER BY 1""", [SPLIT]).fetchall()]
     report.parent.mkdir(parents=True, exist_ok=True)
-    report.write_text(_report(base, new, errors, {"total": total, "llm": llm},
+    report.write_text(_report(base, new, errors, {"total": total, "llm": llm, "template_ids": template_ids},
                               {"calls": calls, "rejected": rejected, "tokens": tokens}, model, variety))
     return {"baseline_caught": base.caught, "caught": new.caught, "planted": new.planted,
             "false_alarms": new.false_alarms, "mistakes": len(errors), "llm_charts": llm, **stats}

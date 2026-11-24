@@ -122,3 +122,24 @@ def test_check_rejects_denying_a_planned_diagnosis():
     # a planned rule-out of the same diagnosis is allowed
     planned = (Mention("N17.9", "acute kidney injury", "present"), Mention("N17.9", "no AKI", "negated"))
     assert check_notes(notes("Acute kidney injury.", "Later: no AKI."), planned).ok
+
+
+def test_note_checker_never_uses_the_engine():
+    """The note check compares the plan with the note text only. If it called the engine or the
+    gap finder, the test data would be graded by the thing under test."""
+    import ast
+
+    notes_dir = Path(__file__).resolve().parents[1] / "src" / "wardsight" / "notes"
+    for path in notes_dir.glob("*.py"):
+        tree = ast.parse(path.read_text())
+        imported = [n.module or "" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)]
+        imported += [a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names]
+        assert not [m for m in imported if m.startswith(("wardsight.engine", "wardsight.bench"))], path.name
+
+
+def test_rejected_drafts_are_recorded_with_their_reasons(db: Path, tmp_path: Path):
+    generate, _ = fake_model(leak_first=True)
+    write_notes(db, config(tmp_path, 10_000_000), generate, "fake", limit=1)
+    with duckdb.connect(str(db), read_only=True) as con:
+        rows = con.execute("SELECT attempt, problems FROM ops.note_rejections").fetchall()
+    assert rows and rows[0][0] == 1 and "respiratory failure" in rows[0][1]
